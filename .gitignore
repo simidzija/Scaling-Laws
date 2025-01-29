@@ -1,4 +1,4 @@
 *__pycache__*
 .pytest_cache
 notes.txt
-*.arrow
+data/train/*.arrow
