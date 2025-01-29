@@ -1,5 +1,11 @@
 # Standard library
 from datetime import datetime
+from pathlib import Path
+
+# Third-party
+from datasets import load_from_disk
+
+ROOT = Path(__file__).resolve().parent.parent
 
 
 ################################  GPU  #####################################
@@ -44,6 +50,11 @@ WORDS_PER_MB = 175,000
 
 # Tokens per word in English (using BPE)
 TOKENS_PER_WORD = 1.3  
+
+
+
+
+
 
 
 
