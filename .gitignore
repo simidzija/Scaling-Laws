@@ -1,5 +1,5 @@
 *__pycache__*
 .pytest_cache
 notes.txt
-data_wikitext
-scripts/get_wikitext_data.py
+data/data.jsonl
+data/data.txt
