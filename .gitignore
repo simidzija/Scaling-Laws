@@ -2,4 +2,4 @@
 .pytest_cache
 notes.txt
 data/data.jsonl
-data/data.txt
+data/train_data.txt

@@ -11,7 +11,12 @@ from concat import concat_jsonl
 
 
 if __name__ == '__main__':
-    inpath = ROOT/'data/data.jsonl'
-    outpath = ROOT/'data/data.txt'
+    jsonl_path = str(ROOT/'data/data.jsonl')
+    train_path = str(ROOT/'data/train_data.txt')
+    test_path = str(ROOT/'data/test_data.txt')
+    test_size = 100  # articles
     
-    concat_jsonl(inpath, outpath)
+    concat_jsonl(jsonl_path=jsonl_path,
+                 train_path=train_path,
+                 test_path=test_path,
+                 test_size=test_size)
