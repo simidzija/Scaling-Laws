@@ -2,5 +2,4 @@
 .pytest_cache
 notes.txt
 data/data.jsonl
-data/train_data.txt
-data/train_data.memmap
+data/train_data.*
