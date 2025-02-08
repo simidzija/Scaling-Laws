@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.append(str(ROOT/'src'))
 
 # Local
-from concat import concat_jsonl
+from split_jsonl import split_jsonl
 
 
 if __name__ == '__main__':
@@ -16,7 +16,7 @@ if __name__ == '__main__':
     test_path = str(ROOT/'data/test_data.txt')
     test_size = 100  # articles
     
-    concat_jsonl(jsonl_path=jsonl_path,
-                 train_path=train_path,
-                 test_path=test_path,
-                 test_size=test_size)
+    split_jsonl(jsonl_path=jsonl_path,
+                train_path=train_path,
+                test_path=test_path,
+                test_size=test_size)

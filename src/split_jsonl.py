@@ -1,7 +1,7 @@
 # Standard library
 import json
 
-def concat_jsonl(jsonl_path: str, 
+def split_jsonl(jsonl_path: str, 
                  train_path: str, 
                  test_path: str,
                  test_size: int) -> None:
