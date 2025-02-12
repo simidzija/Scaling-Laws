@@ -1,52 +1,105 @@
 # Standard library
-from datetime import datetime
 from pathlib import Path
 
+# Third-party
+import numpy as np
+
+# Root folder
 ROOT = Path(__file__).resolve().parent.parent
 
 
-################################  GPU  #####################################
+################################  GPU cost  ##################################
 
-# Date instantiated
-DATE_INSTANTIATED = datetime(2025, 1, 24)
+def total_flops(tflops: float=30.0, 
+                cost_per_day: float=8.0, 
+                initial_credits: float=250) -> float:
+    n_days = initial_credits / cost_per_day
+    flops = n_days * 24 * 60 * 60 * tflops * 10**12
 
-# Elapsed time (s)
-elapsed_time = (datetime.now() - DATE_INSTANTIATED).total_seconds()
+    return flops
 
-# TFLOPs/s for T4 GPU
-TFLOPS = 2  
+################################  Data  ######################################
 
-# Cost of T4 GPU ($/hour)
-COST_PER_HOUR = 0.3
-
-# Cost per second ($/s)
-COST_PER_SEC = COST_PER_HOUR / (60 * 60)
-
-# Total credits ($)
-TOTAL_CREDITS = 300
-
-# Credits remaining ($)
-credits_remaining = TOTAL_CREDITS - COST_PER_SEC * elapsed_time
-
-# Time remaining (s)
-time_remaining_secs = credits_remaining / COST_PER_SEC
-
-# Time remaining (days)
-time_remaining_days = time_remaining_secs / (60 * 60 * 24)
-
-print('----------------------  GPU Estimates  -------------------------')
-print(f'Credits remaining: ${credits_remaining:.2f}')
-print(f'Time before credits run out: {time_remaining_days:.1f} days')
-print('\n')
+# Total tokens
+def get_total_tokens(memmap_file: str):
+    mmap_array = np.memmap(memmap_file, dtype=np.int16, mode='r')
+    return mmap_array.shape[0]
 
 
-#############################  Data  ###################################
+################################  GPU Memory  #################################
 
-# Words / MB in English language text
-WORDS_PER_MB = 175,000  
+def memory_of_model(n_params: int, bytes_per_param: int) -> int:
+    return n_params * bytes_per_param 
 
-# Tokens per word in English (using BPE)
-TOKENS_PER_WORD = 1.3  
+def memory_of_data(n_tokens: int, bytes_per_token: int) -> int:
+    return n_tokens * bytes_per_token
+
+def memory_of_activations(n_tokens: int, 
+                          n_layers: int, 
+                          d_model: int, 
+                          bytes_per_activation) -> int:
+    # Factor of 9 below is due to:
+    #   - 1 from input to MHA
+    #   - 3 from Q, K, V
+    #   - 1 from input to FF
+    #   - 4 from intermediate layer of FFNN
+    activations_per_layer = 9 * n_tokens * d_model
+
+    return n_layers * activations_per_layer * bytes_per_activation
+
+def memory_of_gradients(n_params: int, bytes_per_param: int) -> int:
+    return n_params * bytes_per_param
+
+def memory_of_adam(n_params: int, bytes_per_param: int) -> int:
+    return 2 * n_params * bytes_per_param
+
+
+#############################  Params and tokens  #############################
+
+def get_model_sizes(total_compute: float, 
+                    size_fractions: list[float], 
+                    toks_to_params: list[int]) -> list[float]:
+    """
+    Estimates model size that can be trained with given compute budget.
+      - size_fractions: model sizes to train as fractions of max model size
+      - toks_to_params: tokens/param ratios to train each model size with
+    """
+    total_toks_to_params = sum(toks_to_params)
+    total_toks_per_max_size = [p * total_toks_to_params for p in size_fractions]
+
+    computes_per_max_size_squared = [6*p*t for p, t in zip(size_fractions, total_toks_per_max_size)]
+
+    total_compute_per_max_size_squared = sum(computes_per_max_size_squared)
+
+    max_size = np.sqrt(total_compute / total_compute_per_max_size_squared)
+
+    model_sizes = [frac * max_size for frac in size_fractions]
+
+    return model_sizes
+
+
+if __name__ == '__main__':
+    # Total tokens
+    tokens = get_total_tokens(ROOT/'data/train_data.memmap')
+    print(f'Total tokens: {tokens:,}')
+
+    # Total flops
+    flops = total_flops()
+    print(f'Total flops: {flops:.1E}')
+
+    # Model sizes
+    toks_to_params=[5, 10, 20, 40]
+    model_sizes = get_model_sizes(flops, 
+                                  size_fractions=[0.001, 0.01, 0.1, 1.0],
+                                  toks_to_params=toks_to_params)
+    print(f'Can train:')
+    for params in model_sizes:
+        print(f'  - {params:>12,.0f} parameter model')
+    print(f'each with {toks_to_params} tokens to parameters.')
+
+
+
+
 
 
 
