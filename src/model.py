@@ -8,6 +8,7 @@ import torch.nn as nn
 from torch import Tensor
 
 
+
 class Transformer(nn.Module):
     def __init__(self, 
                  vocab_size: int,
@@ -47,6 +48,10 @@ class Transformer(nn.Module):
         x = self.deembed(x)
 
         return x
+    
+
+def create_model(n_params: int) -> Transformer:
+    pass
 
 
 ##################################  Layers  ###################################
