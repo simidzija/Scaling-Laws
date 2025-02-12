@@ -6,6 +6,8 @@ from typing import Optional
 # Third-party
 import numpy as np
 import torch
+import torch.nn as nn
+from torch.amp import autocast, GradScaler  # automatic mixed precision
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader, Dataset
@@ -15,41 +17,76 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.append(str(ROOT/'src'))
 
 # Local
-from model import Transformer
+from model import create_model, Transformer
 
-
-def train(n_params: int,
+def train(model: Transformer,
+          device: torch.device,
           n_tokens: int,
           batch_size: int,
           seq_len: int,
           lr: float,
           train_data: str,
           test_data: str):
-    # create model
-    model = create_model(n_params)
 
-    # create optimizer
+    # move model to device
+    model.to(device)
+
+    # loss function
+    loss_fn = nn.CrossEntropyLoss()
+
+    # optimizer
     optim = AdamW(model.parameters(), lr=lr)
 
-    # compute number of batches
-    n_batches = compute_num_batches(n_params, n_tokens, batch_size, seq_len)
+    # number of batches
+    n_batches = compute_num_batches(n_tokens, batch_size, seq_len)
 
-    # create cosine annealing lr scheduler
+    # lr scheduler
     lr_scheduler = CosineAnnealingLR(optim, T_max=n_batches, eta_min=lr/10)
+
+    # grad scaler
+    scaler = GradScaler()
 
     # create dataset
     n_seqs = n_batches * batch_size
     dataset = MemmapDataset(train_data, n_seqs=n_seqs, seq_len=seq_len)
 
     # create dataloader
-    data_loader = DataLoader(dataset, 
-                             batch_size=batch_size, 
-                             num_workers=4,
-                             pin_memory=torch.cuda.is_available(),
-                             persistent_workers=True)
+    dataloader = DataLoader(dataset, 
+                            batch_size=batch_size, 
+                            num_workers=4,
+                            pin_memory=device.type == 'cuda',
+                            persistent_workers=True)
 
+    # training loop
+    for batch, data in enumerate(dataloader):
 
+        # move data to device
+        data = data.to(device, non_blocking=True)
 
+        # automatically use FP16 precision when safe, FP32 otherwise
+        with autocast():
+
+            # logits (omit last token; shape (seq, token, logits))
+            logits: torch.Tensor = model(data[:, :-1]).permute(0, 2, 1)
+
+            # ground truth (omit first token)
+            truth = data[:, 1:]  # shape (seq, token) 
+
+            # loss
+            loss: torch.Tensor = loss_fn(logits, truth)
+
+        # backward on scaled loss
+        optim.zero_grad()
+        scaler.scale(loss).backward()
+
+        # optim step
+        scaler.step(optim)
+
+        # update scaler
+        scaler.update()
+
+        # lr step
+        lr_scheduler.step()
 
 
 class MemmapDataset(Dataset):
@@ -68,8 +105,6 @@ class MemmapDataset(Dataset):
         if self.data is None:
             self.init_data()
         
-        assert self.data.shape == self.data_shape, f'self.data.shape is {self.data.shape} and not the expected {self.data_shape}. There might have been an error loading the data.'
-        
         return self.data[idx]
 
     def init_data(self):
@@ -84,11 +119,7 @@ class MemmapDataset(Dataset):
 
 ##############################  Helper functions  ##############################
 
-def create_model(n_params: int) -> Transformer:
-    pass
-
-def compute_num_batches(n_params: int, 
-                        n_tokens: int, 
+def compute_num_batches(n_tokens: int, 
                         batch_size: int,
                         seq_len: int) -> int:
     pass
