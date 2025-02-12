@@ -70,15 +70,15 @@ class Block(nn.Module):
     def forward(self, x: Tensor) -> Tensor:
         # Multi-head attention
         y = self.ln_mha(x)
-        y = self.mha(x)
-        y = self.dropout(x)
+        y = self.mha(y)
+        y = self.dropout(y)
         y = y + x
 
         # Feed Forward
         x = y
         y = self.ln_ff(x)
-        y = self.ff(x)
-        y = self.dropout(x) 
+        y = self.ff(y)
+        y = self.dropout(y) 
         y = y + x
 
         return y
