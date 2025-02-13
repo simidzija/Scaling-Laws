@@ -8,20 +8,18 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 
 
-################################  GPU cost  ##################################
 
-def total_flops(tflops: float=30.0, 
-                cost_per_day: float=8.0, 
-                initial_credits: float=250) -> float:
+def get_total_flops(tflops: float=20.0, 
+                    cost_per_day: float=8.0, 
+                    initial_credits: float=250) -> float:
+    """Total flops with given GPU budget."""
     n_days = initial_credits / cost_per_day
     flops = n_days * 24 * 60 * 60 * tflops * 10**12
 
     return flops
 
-################################  Data  ######################################
-
-# Total tokens
 def get_total_tokens(memmap_file: str):
+    """Total tokens in data file."""
     mmap_array = np.memmap(memmap_file, dtype=np.int16, mode='r')
     return mmap_array.shape[0]
 
@@ -54,7 +52,8 @@ def memory_of_adam(n_params: int, bytes_per_param: int) -> int:
     return 2 * n_params * bytes_per_param
 
 
-#############################  Params and tokens  #############################
+
+##############################################################################
 
 def get_model_sizes(total_compute: float, 
                     size_fractions: list[float], 
@@ -84,7 +83,7 @@ if __name__ == '__main__':
     print(f'Total tokens: {tokens:,}')
 
     # Total flops
-    flops = total_flops()
+    flops = get_total_flops()
     print(f'Total flops: {flops:.1E}')
 
     # Model sizes
