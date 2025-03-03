@@ -20,12 +20,12 @@ class Transformer(nn.Module):
         super().__init__()
         
         # Layers
-        self.embed = Embedding(vocab_size, d_model)
+        self.embed = nn.Embedding(vocab_size, d_model)
         self.pe = PositionalEncoding(d_model, max_seq_len)
-        self.dropout = Dropout(p_drop)
+        self.dropout = nn.Dropout(p_drop)
         self.blocks = nn.Sequential(*[Block(d_model, n_heads, p_drop) 
                                       for _ in range(n_blocks)])
-        self.ln = LayerNorm(d_model)
+        self.ln = nn.LayerNorm(d_model)
         self.deembed = DeEmbedding(self.embed)
 
     def forward(self, x: Tensor) -> Tensor:
@@ -59,14 +59,18 @@ def create_model(n_params: int) -> Transformer:
 class Block(nn.Module):
     def __init__(self, d_model: int, n_heads: int, p_drop: float) -> None:
         super().__init__()
+
         self.d_model = d_model
         self.n_heads = n_heads
         self.p_drop = p_drop
 
         # Layers
-        self.ln_mha = LayerNorm(d_model)
-        self.ln_ff = LayerNorm(d_model)
-        self.dropout = Dropout(p_drop)
+        self.ln_mha = nn.LayerNorm(d_model)
+        self.ln_ff = nn.LayerNorm(d_model)
+        self.dropout = nn.Dropout(p_drop)
+
+# STOPPED HERE
+
         self.mha = MultiheadAttention(d_model, n_heads, p_drop)
         self.ff = FeedForward(d_model)
 
@@ -151,21 +155,8 @@ class FeedForward(nn.Module):
         return self.layers(x)
 
 
-class Embedding(nn.Module):
-    def __init__(self, vocab_size: int, d_model: int) -> None:
-        super().__init__()
-        self.vocab_size = vocab_size
-        self.d_model = d_model
-
-        # Embedding tensor
-        self.weight = nn.Parameter(torch.randn(vocab_size, d_model))
-
-    def forward(self, x: Tensor) -> Tensor:
-        return self.weight[x]
-
-
 class DeEmbedding(nn.Module):
-    def __init__(self, embed: Embedding) -> None:
+    def __init__(self, embed: nn.Embedding) -> None:
         super().__init__()
         self.embed = embed
 
@@ -175,33 +166,38 @@ class DeEmbedding(nn.Module):
         return self.embed.weight.T
 
     def forward(self, x: Tensor) -> Tensor:
-        return self.weight[x]
-
+        return x @ self.weight
+        
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model: int, max_seq_len: int) -> None:
+    def __init__(self, 
+                 d_model: int, 
+                 max_seqlen: int, 
+                 max_wavelen: int = 10000) -> None:
         if d_model % 2 != 0:
             raise ValueError(f'd_model must be even but got {d_model}')
         super().__init__()
-        self.d_model = d_model
-        self.max_seq_len = max_seq_len
 
-        # PE tensor
-        ps = torch.arange(0, max_seq_len)[:, None]
-        ds = torch.arange(0, d_model, 2)
-        wavelen = max_seq_len ** (ds / d_model)
-        pe = torch.empty(max_seq_len, d_model)
-        pe[:, 0::2] = torch.sin(ps / wavelen)
-        pe[:, 1::2] = torch.cos(ps / wavelen)
+        self.d_model = d_model
+        self.max_seqlen = max_seqlen
+
+        # Wavelengths
+        wavelen = max_wavelen ** (torch.arange(d_model // 2) / d_model)
+
+        # Positional encoding
+        pe = torch.zeros(max_seqlen, d_model)
+        theta = torch.arange(max_seqlen).unsqueeze(1) / wavelen.unsqueeze(0)
+        pe[:, 0::2] = torch.sin(theta)
+        pe[:, 1::2] = torch.cos(theta)
         
         # Register buffer
         self.register_buffer('pe', pe)
 
     def forward(self, x: Tensor) -> Tensor:
-        seq_len = x.shape[-2]
-        if seq_len > self.max_seq_len:
-            raise ValueError(f'seq_len ({seq_len}) is larger than max_seq_len ({self.max_seq_len}).')
-        return x + self.pe[..., :seq_len, :]
+        seqlen = x.shape[-2]
+        if seqlen > self.max_seqlen:
+            raise ValueError(f'seqlen ({seqlen}) is larger than max_seqlen ({self.max_seqlen}).')
+        return x + self.pe[:seqlen, :].to(x.dtype)
 
 
 class Dropout(nn.Module):
@@ -260,3 +256,4 @@ model = Transformer(vocab_size=100,
 
 
 print(model_size(model))
+
