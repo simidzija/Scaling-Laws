@@ -26,7 +26,7 @@ class Transformer(nn.Module):
         self.blocks = nn.Sequential(*[Block(d_model, n_heads, p_drop) 
                                       for _ in range(n_blocks)])
         self.ln = LayerNorm(d_model)
-        self.deembed = nn.Linear(d_model, vocab_size)
+        self.deembed = DeEmbedding(self.embed)
 
     def forward(self, x: Tensor) -> Tensor:
         # Embedding
@@ -59,8 +59,6 @@ def create_model(n_params: int) -> Transformer:
 class Block(nn.Module):
     def __init__(self, d_model: int, n_heads: int, p_drop: float) -> None:
         super().__init__()
-
-        # Params
         self.d_model = d_model
         self.n_heads = n_heads
         self.p_drop = p_drop
@@ -91,8 +89,6 @@ class Block(nn.Module):
 class MultiheadAttention(nn.Module):
     def __init__(self, d_model: int, n_heads: int, p_drop: int) -> None:
         super().__init__()
-
-        # Params
         if d_model % n_heads != 0:
             raise ValueError(f'n_heads ({n_heads}) does not divide d_model {d_model}.')
         self.d_model = d_model
@@ -144,8 +140,6 @@ class MultiheadAttention(nn.Module):
 class FeedForward(nn.Module):
     def __init__(self, d_model: int) -> None:
         super().__init__()
-
-        # Params
         self.d_model = d_model
 
         # Layers
@@ -160,16 +154,28 @@ class FeedForward(nn.Module):
 class Embedding(nn.Module):
     def __init__(self, vocab_size: int, d_model: int) -> None:
         super().__init__()
-
-        # Params
         self.vocab_size = vocab_size
         self.d_model = d_model
 
         # Embedding tensor
-        self.emb = nn.Parameter(torch.randn(vocab_size, d_model))
+        self.weight = nn.Parameter(torch.randn(vocab_size, d_model))
 
     def forward(self, x: Tensor) -> Tensor:
-        return self.emb[x]
+        return self.weight[x]
+
+
+class DeEmbedding(nn.Module):
+    def __init__(self, embed: Embedding) -> None:
+        super().__init__()
+        self.embed = embed
+
+    # De-embedding tensor - tied to embedding tensor
+    @property
+    def weight(self):
+        return self.embed.weight.T
+
+    def forward(self, x: Tensor) -> Tensor:
+        return self.weight[x]
 
 
 class PositionalEncoding(nn.Module):
@@ -177,8 +183,6 @@ class PositionalEncoding(nn.Module):
         if d_model % 2 != 0:
             raise ValueError(f'd_model must be even but got {d_model}')
         super().__init__()
-
-        # Params
         self.d_model = d_model
         self.max_seq_len = max_seq_len
 
@@ -203,8 +207,6 @@ class PositionalEncoding(nn.Module):
 class Dropout(nn.Module):
     def __init__(self, p_drop: float) -> None:
         super().__init__()
-
-        # Params
         self. p_drop = p_drop
 
     def forward(self, x: Tensor) -> Tensor:
@@ -218,8 +220,6 @@ class LayerNorm(nn.Module):
     def __init__(self, normalized_shape: int | Iterable[int], 
                  eps: float=0.00001) -> None:
         super().__init__()
-
-        # Params
         self.normalized_shape = (normalized_shape, ) if isinstance(normalized_shape, int) else normalized_shape 
         self.eps = eps
         self.n_dims = len(self.normalized_shape)
@@ -241,4 +241,22 @@ class LayerNorm(nn.Module):
 
         
 
+
+################################################################################
+
+def model_size(model: nn.Module) -> int:
+    """Computes model size in bytes."""
+    param_size = sum(p.numel() * p.element_size() for p in model.parameters())
+    buffer_size = sum(b.numel() * b.element_size() for b in model.buffers())
+    return param_size + buffer_size
         
+
+model = Transformer(vocab_size=100,
+                    d_model=64,
+                    max_seq_len=128,
+                    n_heads=4,
+                    n_blocks=5,
+                    p_drop=0.1)
+
+
+print(model_size(model))
