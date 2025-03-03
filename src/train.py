@@ -1,3 +1,5 @@
+# TODO: profile actual TFLOPS
+
 # Standard library
 import sys
 from pathlib import Path
@@ -112,8 +114,6 @@ class MemmapDataset(Dataset):
                               dtype=np.int16, 
                               mode='r', 
                               shape=self.data_shape)
-
-
 
 
 
