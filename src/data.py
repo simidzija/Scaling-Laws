@@ -136,9 +136,10 @@ if __name__ == '__main__':
     # create_tokenizer(iterator, tokenizer_path, vocab_size)
 
     ### tokenize dataset
-    tokens_path = str(ROOT / 'data/tokens_ts_train.memmap')
-    text_list = load_dataset(dataset_path)['train']['text']
+    tokens_path = str(ROOT / 'data/tokens_ts_validation.memmap')
+    text_list = load_dataset(dataset_path)['validation']['text']
     tokenize(text_list, tokens_path, tokenizer_path, filetype='memmap')
 
-    marr = load_memmap(ROOT / 'data/tokens_ts_train.memmap', dtype=np.int16)
-    print(marr.shape)
+    ### load dataset
+    # marr = load_memmap(ROOT / 'data/tokens_ts_train.memmap', dtype=np.int16)
+    # print(marr.shape)
