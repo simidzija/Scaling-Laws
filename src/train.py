@@ -1,5 +1,3 @@
-# TODO: profile actual TFLOPS
-
 # Standard library
 import sys
 from pathlib import Path
@@ -19,6 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.append(str(ROOT/'src'))
 
 # Local
+from data import MemmapDataset
 from model import create_model, Transformer
 
 def train(model: Transformer,
@@ -91,37 +90,15 @@ def train(model: Transformer,
         lr_scheduler.step()
 
 
-class MemmapDataset(Dataset):
-    def __init__(self, 
-                 data_path: str,
-                 n_seqs: int,
-                 seq_len: int) -> None:
-        self.data_path = data_path
-        self.data: Optional[np.memmap] = None
-        self.n_seqs = n_seqs
-        self.seq_len = seq_len
-        self.data_shape = (n_seqs, seq_len)
-
-    def __getitem__(self, idx: int) -> np.ndarray:
-        # initialize data if not already initialized
-        if self.data is None:
-            self.init_data()
-        
-        return self.data[idx]
-
-    def init_data(self):
-        self.data = np.memmap(self.data_path, 
-                              dtype=np.int16, 
-                              mode='r', 
-                              shape=self.data_shape)
-
-
 
 ##############################  Helper functions  ##############################
 
 def compute_num_batches(n_tokens: int, 
                         batch_size: int,
                         seq_len: int) -> int:
-    pass
+    n_batches = n_tokens / (batch_size * seq_len)
+    assert n_batches % 1 == 0, f'Non-integer number of batches when n_tokens = {n_tokens}, batch_size = {batch_size}, seq_len = {seq_len}'
+
+    return int(n_batches)
 
 
