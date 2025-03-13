@@ -8,7 +8,6 @@ import torch.nn as nn
 from torch import Tensor
 
 
-
 class Transformer(nn.Module):
     def __init__(self, 
                  vocab_size: int,
@@ -68,9 +67,6 @@ class Block(nn.Module):
         self.ln_mha = nn.LayerNorm(d_model)
         self.ln_ff = nn.LayerNorm(d_model)
         self.dropout = nn.Dropout(p_drop)
-
-# STOPPED HERE
-
         self.mha = MultiheadAttention(d_model, n_heads, p_drop)
         self.ff = FeedForward(d_model)
 
@@ -104,7 +100,7 @@ class MultiheadAttention(nn.Module):
         self.wqkv = nn.Linear(d_model, 3 * d_model)
         self.wo = nn.Linear(d_model, d_model)
         self.softmax = nn.Softmax(-1)
-        self.dropout = Dropout(p_drop)
+        self.dropout = nn.Dropout(p_drop)
     
     def forward(self, x: Tensor, mask: Optional[Tensor]=None) -> Tensor:
         # Batching
@@ -172,21 +168,21 @@ class DeEmbedding(nn.Module):
 class PositionalEncoding(nn.Module):
     def __init__(self, 
                  d_model: int, 
-                 max_seqlen: int, 
+                 max_seq_len: int, 
                  max_wavelen: int = 10000) -> None:
         if d_model % 2 != 0:
             raise ValueError(f'd_model must be even but got {d_model}')
         super().__init__()
 
         self.d_model = d_model
-        self.max_seqlen = max_seqlen
+        self.max_seq_len = max_seq_len
 
         # Wavelengths
         wavelen = max_wavelen ** (torch.arange(d_model // 2) / d_model)
 
         # Positional encoding
-        pe = torch.zeros(max_seqlen, d_model)
-        theta = torch.arange(max_seqlen).unsqueeze(1) / wavelen.unsqueeze(0)
+        pe = torch.zeros(max_seq_len, d_model)
+        theta = torch.arange(max_seq_len).unsqueeze(1) / wavelen.unsqueeze(0)
         pe[:, 0::2] = torch.sin(theta)
         pe[:, 1::2] = torch.cos(theta)
         
@@ -195,47 +191,10 @@ class PositionalEncoding(nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         seqlen = x.shape[-2]
-        if seqlen > self.max_seqlen:
-            raise ValueError(f'seqlen ({seqlen}) is larger than max_seqlen ({self.max_seqlen}).')
+        if seqlen > self.max_seq_len:
+            raise ValueError(f'seqlen ({seqlen}) is larger than max_seq_len ({self.max_seq_len}).')
         return x + self.pe[:seqlen, :].to(x.dtype)
 
-
-class Dropout(nn.Module):
-    def __init__(self, p_drop: float) -> None:
-        super().__init__()
-        self. p_drop = p_drop
-
-    def forward(self, x: Tensor) -> Tensor:
-        if self.training:
-            mask = torch.rand_like(x) < self.p_drop
-            return x.masked_fill(mask, 0) / (1 - self.p_drop)
-        else:
-            return x
-
-class LayerNorm(nn.Module):
-    def __init__(self, normalized_shape: int | Iterable[int], 
-                 eps: float=0.00001) -> None:
-        super().__init__()
-        self.normalized_shape = (normalized_shape, ) if isinstance(normalized_shape, int) else normalized_shape 
-        self.eps = eps
-        self.n_dims = len(self.normalized_shape)
-        self.dims = list(range(-self.n_dims, 0))
-
-        # Gain and bias
-        self.gain = nn.Parameter(torch.ones(normalized_shape))
-        self.bias = nn.Parameter(torch.zeros(normalized_shape))
-    
-    def forward(self, x: Tensor) -> Tensor:
-        if x.shape[-self.n_dims:] != torch.Size(self.normalized_shape):
-            raise ValueError(f'Expected last {self.n_dims} dims of x to have shape {self.normalized_shape} but got {x.shape[-self.n_dims:]}.')
-
-        mean = torch.mean(x, dim=self.dims, keepdim=True)
-        var = torch.var(x, dim=self.dims, unbiased=False, keepdim=True)
-
-        return ((x - mean) / torch.sqrt(var + self.eps)) * self.gain + self.bias
-
-
-        
 
 
 ################################################################################
@@ -247,13 +206,13 @@ def model_size(model: nn.Module) -> int:
     return param_size + buffer_size
         
 
-model = Transformer(vocab_size=100,
-                    d_model=64,
-                    max_seq_len=128,
-                    n_heads=4,
-                    n_blocks=5,
-                    p_drop=0.1)
+if __name__ == '__main__':
+    model = Transformer(vocab_size=100,
+                        d_model=64,
+                        max_seq_len=128,
+                        n_heads=4,
+                        n_blocks=5,
+                        p_drop=0.1)
 
-
-print(model_size(model))
+    print(model_size(model))
 
