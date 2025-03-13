@@ -1,5 +1,6 @@
 *__pycache__*
 .pytest_cache
+data/
+archive
 notes.txt
-data/data.jsonl
-data/train_data.*
+rough
