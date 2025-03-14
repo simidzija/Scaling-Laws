@@ -207,12 +207,60 @@ def model_size(model: nn.Module) -> int:
         
 
 if __name__ == '__main__':
-    model = Transformer(vocab_size=100,
-                        d_model=64,
-                        max_seq_len=128,
-                        n_heads=4,
-                        n_blocks=5,
-                        p_drop=0.1)
+    ### train Transformer to reverse sequence
+    import matplotlib.pyplot as plt
+    from tqdm import tqdm
 
-    print(model_size(model))
+    max_num = 100
+    n_batches = 1500
+    batch_size = 32
+    seq_len = 16
+
+    model = Transformer(vocab_size=max_num,
+                        d_model=128,
+                        max_seq_len=16,
+                        n_heads=4,
+                        n_blocks=3,
+                        p_drop=0.0)
+    
+    loss_fn = nn.CrossEntropyLoss()
+    optim = torch.optim.AdamW(model.parameters())
+
+    losses = []
+    for _ in tqdm(range(n_batches)):
+        # data
+        x = torch.randint(0, max_num, (batch_size, seq_len))
+        y = x.flip(1)
+
+        # prediction
+        logits: Tensor = model(x)
+
+        # loss
+        loss: Tensor = loss_fn(logits.permute(0,2,1), y)
+        losses.append(loss.item())
+
+        # grad and step
+        optim.zero_grad()
+        loss.backward()
+        optim.step()
+
+    # causal attention means first half of output seq is wrong
+    random_guessing = np.log(max_num)
+    irreducible_loss = 0.5 * random_guessing
+
+    plt.plot(losses, label='training loss')
+    plt.axhline(random_guessing, color='k', linestyle='--', label='random guessing loss')
+    plt.axhline(irreducible_loss, color='r', linestyle='--', label='irreducible loss')
+    plt.yscale('log')
+    plt.xlabel('batch')
+    plt.legend()
+    plt.show()
+
+
+
+
+
+
+
+
 
