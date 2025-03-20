@@ -17,6 +17,14 @@ class Transformer(nn.Module):
                  n_blocks: int,
                  p_drop: float=0.0) -> None:
         super().__init__()
+
+        # Hyperparameters
+        self.vocab_size = vocab_size
+        self.d_model = d_model
+        self.max_seq_len = max_seq_len
+        self.n_heads = n_heads
+        self.n_blocks = n_blocks
+        self.p_drop = p_drop
         
         # Layers
         self.embed = nn.Embedding(vocab_size, d_model)
@@ -48,10 +56,24 @@ class Transformer(nn.Module):
 
         return x
     
+    @property
+    def n_params(self) -> int:
+        n_mha = 4 * self.d_model**2  # multi-head attention
+        n_mha_ln = 2 * self.d_model  # multi-head attention layer norm
+        n_ff = 8 * self.d_model**2 + 5*self.d_model  # feed-forward
+        n_ff_ln = 2 * self.d_model  # feed-forward layer norm
+        
+        n_emb = self.vocab_size * self.d_model  # embedding
+        n_block = n_mha + n_mha_ln + n_ff + n_ff_ln  # entire transformer block
+        n_ln = 2 * self.d_model  # final layer norm
 
-def create_model(n_params: int) -> Transformer:
-    pass
+        return n_emb + self.n_blocks * n_block + n_ln
 
+    @property
+    def n_bytes(self) -> int:
+        param_size = sum(p.numel() * p.element_size() for p in self.parameters())
+        buffer_size = sum(b.numel() * b.element_size() for b in self.buffers())
+        return param_size + buffer_size
 
 ##################################  Layers  ###################################
 
@@ -199,13 +221,6 @@ class PositionalEncoding(nn.Module):
 
 ################################################################################
 
-def model_size(model: nn.Module) -> int:
-    """Computes model size in bytes."""
-    param_size = sum(p.numel() * p.element_size() for p in model.parameters())
-    buffer_size = sum(b.numel() * b.element_size() for b in model.buffers())
-    return param_size + buffer_size
-        
-
 if __name__ == '__main__':
     ### train Transformer to reverse sequence
     import matplotlib.pyplot as plt
@@ -222,7 +237,7 @@ if __name__ == '__main__':
                         n_heads=4,
                         n_blocks=3,
                         p_drop=0.0)
-    
+
     loss_fn = nn.CrossEntropyLoss()
     optim = torch.optim.AdamW(model.parameters())
 
