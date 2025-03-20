@@ -1,6 +1,6 @@
 *__pycache__*
 .pytest_cache
-*.memmap
+data/tiny_stories
 archive
 notes.txt
 rough
