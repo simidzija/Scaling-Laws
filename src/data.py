@@ -126,18 +126,18 @@ def memmap_handler(tokens: list[int], tokens_path: str) -> None:
     data.flush()
 
 
-################################################################################
+################################  Create datasets  #############################
 
-if __name__ == '__main__':
+def create_tiny_stories():
     dataset_path = "roneneldan/TinyStories"
     tokenizer_path = str(ROOT / 'data/tiny_stories/tokenizer.json')
 
-    ### create tokenizer
+    ## create tokenizer
     vocab_size = 10000
     iterator = get_hf_iterator(dataset_path)
     create_tokenizer(iterator, tokenizer_path, vocab_size)
 
-    ### tokenize
+    ## tokenize
     tokens_path = str(ROOT / 'data/tiny_stories/validation.memmap')
     text_list = load_dataset(dataset_path)['validation']['text']
     tokenize(text_list, tokens_path, tokenizer_path, filetype='memmap')
@@ -146,6 +146,52 @@ if __name__ == '__main__':
     text_list = load_dataset(dataset_path)['train']['text']
     tokenize(text_list, tokens_path, tokenizer_path, filetype='memmap')
 
-    ### load dataset
-    # marr = load_memmap(ROOT / 'data/tokens_ts_train.memmap', dtype=np.int16)
-    # print(marr.shape)
+def create_fibonacci(seq_len: int=64,
+                     n_seeds: int=5,
+                     max_int: int=100,
+                     n_train_seqs: int=100000,
+                     n_test_seqs: int=100,
+                     trainpath: str='data/fibonacci/train.memmap',
+                     testpath: str='data/fibonacci/test.memmap') -> None:
+    """
+    Dataset of integer sequences.
+    Each sequence starts with n_seeds random integers, and subsequent elements in the sequence are sums of the previous n_seeds elements, modulo max_int.
+    """
+
+    def create_seq() -> np.ndarray:
+        sos, eos = -1, -2
+        seq = np.zeros(seq_len)
+        seq[0] = sos
+        seq[1:n_seeds + 1] = np.random.randint(0, max_int, n_seeds)
+        for i in range(n_seeds + 1, seq_len - 1):
+            seq[i] = np.sum(seq[i - n_seeds: i]) % max_int
+        seq[-1] = eos
+        return seq
+
+    ## metadata
+
+    ## train data
+    print(f'Creating train data:')
+    shape = (n_train_seqs * seq_len,)
+    data = np.memmap(filename=trainpath, dtype=np.int16, mode='w+', shape=shape)
+    data[:] = np.zeros(shape)
+    for i in tqdm(range(n_train_seqs)):
+        data[i * seq_len : (i + 1) * seq_len] = create_seq()
+    data.flush()
+
+    ## test data
+    print('Creating test data')
+    shape = (n_test_seqs * seq_len,)
+    data = np.memmap(filename=testpath, dtype=np.int16, mode='w+', shape=shape)
+    data[:] = np.zeros(shape)
+    for i in tqdm(range(n_test_seqs)):
+        data[i * seq_len : (i + 1) * seq_len] = create_seq()
+    data.flush()
+    
+
+
+################################################################################
+
+if __name__ == '__main__':
+    # create_tiny_stories()
+    create_fibonacci()
