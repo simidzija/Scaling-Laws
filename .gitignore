@@ -1,6 +1,6 @@
 *__pycache__*
 .pytest_cache
-data/tokens_ts_train.memmap
+*.memmap
 archive
 notes.txt
 rough

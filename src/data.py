@@ -49,7 +49,9 @@ def load_memmap(path: str, dtype: np.dtype) -> np.memmap:
 
 ##############################  Data processing  ###############################
 
-def create_tokenizer(iterable: Iterable[str], savepath: str, vocab_size: int) -> None:
+def create_tokenizer(iterable: Iterable[str], 
+                     savepath: str, 
+                     vocab_size: int) -> None:
     # Initialize tokenizer
     tokenizer = Tokenizer(BPE(unk_token="[UNK]"))
     tokenizer.pre_tokenizer = Whitespace()
@@ -128,16 +130,20 @@ def memmap_handler(tokens: list[int], tokens_path: str) -> None:
 
 if __name__ == '__main__':
     dataset_path = "roneneldan/TinyStories"
-    tokenizer_path = str(ROOT / 'data/tokenizer_ts.json')
+    tokenizer_path = str(ROOT / 'data/tiny_stories/tokenizer.json')
 
     ### create tokenizer
-    # vocab_size = 32000
-    # iterator = get_hf_iterator(dataset_path)
-    # create_tokenizer(iterator, tokenizer_path, vocab_size)
+    vocab_size = 10000
+    iterator = get_hf_iterator(dataset_path)
+    create_tokenizer(iterator, tokenizer_path, vocab_size)
 
-    ### tokenize dataset
-    tokens_path = str(ROOT / 'data/tokens_ts_validation.memmap')
+    ### tokenize
+    tokens_path = str(ROOT / 'data/tiny_stories/validation.memmap')
     text_list = load_dataset(dataset_path)['validation']['text']
+    tokenize(text_list, tokens_path, tokenizer_path, filetype='memmap')
+
+    tokens_path = str(ROOT / 'data/tiny_stories/train.memmap')
+    text_list = load_dataset(dataset_path)['train']['text']
     tokenize(text_list, tokens_path, tokenizer_path, filetype='memmap')
 
     ### load dataset
