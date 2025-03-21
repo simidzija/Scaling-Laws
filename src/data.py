@@ -36,6 +36,9 @@ class MemmapDataset(Dataset):
         
         return self.data[idx]
 
+    def __len__(self) -> int:
+        return self.n_seqs
+
     def init_data(self):
         self.data = np.memmap(self.data_path, 
                               dtype=np.int16, 
