@@ -1,16 +1,17 @@
 # Standard library
+import json
 import sys
 from pathlib import Path
-from typing import Optional
 
 # Third-party
-import numpy as np
+import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 from torch.amp import autocast, GradScaler  # automatic mixed precision
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 # Add source dir to sys.path
 ROOT = Path(__file__).resolve().parent.parent
@@ -18,16 +19,15 @@ sys.path.append(str(ROOT/'src'))
 
 # Local
 from data import MemmapDataset
-from model import create_model, Transformer
+from model import Transformer
 
 def train(model: Transformer,
           device: torch.device,
-          n_tokens: int,
+          train_path: str,
+          n_batches: int,
           batch_size: int,
           seq_len: int,
-          lr: float,
-          train_data: str,
-          test_data: str):
+          lr: float=0.001) -> None:
 
     # move model to device
     model.to(device)
@@ -38,34 +38,35 @@ def train(model: Transformer,
     # optimizer
     optim = AdamW(model.parameters(), lr=lr)
 
-    # number of batches
-    n_batches = compute_num_batches(n_tokens, batch_size, seq_len)
-
     # lr scheduler
     lr_scheduler = CosineAnnealingLR(optim, T_max=n_batches, eta_min=lr/10)
 
     # grad scaler
-    scaler = GradScaler()
+    if device == 'cuda':
+        scaler = GradScaler()
 
     # create dataset
     n_seqs = n_batches * batch_size
-    dataset = MemmapDataset(train_data, n_seqs=n_seqs, seq_len=seq_len)
+    dataset = MemmapDataset(train_path, n_seqs=n_seqs, seq_len=seq_len)
 
     # create dataloader
     dataloader = DataLoader(dataset, 
                             batch_size=batch_size, 
                             num_workers=4,
-                            pin_memory=device.type == 'cuda',
+                            pin_memory=device == 'cuda',
                             persistent_workers=True)
+    
+    # loss list
+    losses = []
 
     # training loop
-    for batch, data in enumerate(dataloader):
+    for batch, data in tqdm(enumerate(dataloader)):
 
         # move data to device
         data = data.to(device, non_blocking=True)
 
         # automatically use FP16 precision when safe, FP32 otherwise
-        with autocast():
+        with autocast(device_type=device):
 
             # logits (omit last token; shape (seq, token, logits))
             logits: torch.Tensor = model(data[:, :-1]).permute(0, 2, 1)
@@ -78,27 +79,44 @@ def train(model: Transformer,
 
         # backward on scaled loss
         optim.zero_grad()
-        scaler.scale(loss).backward()
+        if device == 'cuda':
+            scaler.scale(loss).backward()
+        else:
+            loss.backward()
 
         # optim step
-        scaler.step(optim)
+        if device == 'cuda':
+            scaler.step(optim)
+        else:
+            optim.step()
 
         # update scaler
-        scaler.update()
+        if device == 'cuda':
+            scaler.update()
 
         # lr step
         lr_scheduler.step()
 
 
+if __name__ == '__main__':
+    with open(ROOT/'data/fibonacci/metadata.json', 'r') as f:
+        metadata = json.load(f)
+        vocab_size = metadata['max_int']
+        seq_len = metadata['seq_len']
+        train_path = metadata['train_path']
+    
+    model = Transformer(vocab_size=vocab_size,
+                        d_model=128,
+                        max_seq_len=seq_len,
+                        n_heads=4,
+                        n_blocks=5)
 
-##############################  Helper functions  ##############################
+    losses = train(model=model,
+                   device='cpu',
+                   train_path=train_path,
+                   n_batches=100,
+                   batch_size=32,
+                   seq_len=seq_len,
+                   lr=0.001)
 
-def compute_num_batches(n_tokens: int, 
-                        batch_size: int,
-                        seq_len: int) -> int:
-    n_batches = n_tokens / (batch_size * seq_len)
-    assert n_batches % 1 == 0, f'Non-integer number of batches when n_tokens = {n_tokens}, batch_size = {batch_size}, seq_len = {seq_len}'
-
-    return int(n_batches)
-
-
+    plt.plot(losses)
