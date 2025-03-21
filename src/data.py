@@ -1,4 +1,5 @@
 # Standard library
+import json
 import sys
 from pathlib import Path
 from typing import Iterable, Iterator, Optional
@@ -146,13 +147,14 @@ def create_tiny_stories():
     text_list = load_dataset(dataset_path)['train']['text']
     tokenize(text_list, tokens_path, tokenizer_path, filetype='memmap')
 
-def create_fibonacci(seq_len: int=64,
+def create_fibonacci(metadata_path: str,
+                     train_path: str,
+                     test_path: str,
+                     seq_len: int=64,
                      n_seeds: int=5,
                      max_int: int=100,
                      n_train_seqs: int=100000,
-                     n_test_seqs: int=100,
-                     trainpath: str='data/fibonacci/train.memmap',
-                     testpath: str='data/fibonacci/test.memmap') -> None:
+                     n_test_seqs: int=100) -> None:
     """
     Dataset of integer sequences.
     Each sequence starts with n_seeds random integers, and subsequent elements in the sequence are sums of the previous n_seeds elements, modulo max_int.
@@ -169,11 +171,21 @@ def create_fibonacci(seq_len: int=64,
         return seq
 
     ## metadata
+    metadata_dict = {'seq_len': seq_len,
+                     'n_seeds': n_seeds,
+                     'max_int': max_int,
+                     'n_train_seqs': n_train_seqs,
+                     'n_test_seqs': n_test_seqs,
+                     'metadata_path': metadata_path,
+                     'train_path': train_path,
+                     'test_path': test_path}
+    with open(metadata_path, 'w') as f:
+        json.dump(metadata_dict, f, indent=2)
 
     ## train data
     print(f'Creating train data:')
     shape = (n_train_seqs * seq_len,)
-    data = np.memmap(filename=trainpath, dtype=np.int16, mode='w+', shape=shape)
+    data = np.memmap(filename=train_path, dtype=np.int16, mode='w+', shape=shape)
     data[:] = np.zeros(shape)
     for i in tqdm(range(n_train_seqs)):
         data[i * seq_len : (i + 1) * seq_len] = create_seq()
@@ -182,7 +194,7 @@ def create_fibonacci(seq_len: int=64,
     ## test data
     print('Creating test data')
     shape = (n_test_seqs * seq_len,)
-    data = np.memmap(filename=testpath, dtype=np.int16, mode='w+', shape=shape)
+    data = np.memmap(filename=test_path, dtype=np.int16, mode='w+', shape=shape)
     data[:] = np.zeros(shape)
     for i in tqdm(range(n_test_seqs)):
         data[i * seq_len : (i + 1) * seq_len] = create_seq()
@@ -194,4 +206,10 @@ def create_fibonacci(seq_len: int=64,
 
 if __name__ == '__main__':
     # create_tiny_stories()
-    create_fibonacci()
+
+    # create_fibonacci(metadata_path=str(ROOT / 'data/fibonacci/metadata.json'),
+    #                  train_path=str(ROOT / 'data/fibonacci/train.memmap'),
+    #                  test_path=str(ROOT / 'data/fibonacci/test.memmap'))
+
+    data = load_memmap(str(ROOT / 'data/fibonacci/test.memmap'), dtype=np.int16)
+    print(data[:66])
