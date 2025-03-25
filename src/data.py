@@ -216,7 +216,10 @@ if __name__ == '__main__':
 
     create_fibonacci(metadata_path=str(ROOT / 'data/fibonacci/metadata.json'),
                      train_path=str(ROOT / 'data/fibonacci/train.memmap'),
-                     test_path=str(ROOT / 'data/fibonacci/test.memmap'))
+                     test_path=str(ROOT / 'data/fibonacci/test.memmap'),
+                     n_seeds=2,
+                     max_int=10,
+                     n_train_seqs=10**5)
 
     # data = load_memmap(str(ROOT / 'data/fibonacci/test.memmap'), dtype=np.int16)
     # print(data[:64])

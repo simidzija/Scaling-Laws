@@ -26,6 +26,7 @@ if __name__ == '__main__':
 
         # can't predict seed tokens since they are random
         irreducible_loss = (n_seeds / (seq_len - 1)) * np.log(max_int - 2)
+        print(f'irreducible_loss = {irreducible_loss}')
 
     
     model = Transformer(vocab_size=vocab_size,
@@ -33,19 +34,24 @@ if __name__ == '__main__':
                         max_seq_len=seq_len,
                         n_heads=2,
                         n_blocks=3)
+    
+    n_batches = 1000
+    batch_size = 32
+    n_different_seqs = vocab_size ** n_seeds
 
     losses = train(model=model,
                    device='cpu',
                    train_path=train_path,
                    data_dtype=np.int16,
-                   n_batches=100,
-                   batch_size=32,
+                   n_batches=n_batches,
+                   batch_size=batch_size,
                    seq_len=seq_len,
                    lr=0.001,
                    print_period=10)
 
     plt.plot(losses, label='train loss')
     plt.axhline(irreducible_loss, color='k', ls='--', label='irreducible loss')
+    plt.axvline(n_different_seqs, color='r', ls='--', label='~ 1 epoch')
     plt.xlabel('batch')
     plt.yscale('log')
     plt.title(f'{n_seeds}-digit Fibonacci')

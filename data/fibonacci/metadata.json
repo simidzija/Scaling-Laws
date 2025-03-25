@@ -1,10 +1,10 @@
 {
   "seq_len": 32,
-  "n_seeds": 3,
+  "n_seeds": 2,
   "sos": 0,
   "eos": 1,
-  "max_int": 20,
-  "n_train_seqs": 1000000,
+  "max_int": 10,
+  "n_train_seqs": 100000,
   "n_test_seqs": 100,
   "metadata_path": "/Users/petar/scaling_laws/data/fibonacci/metadata.json",
   "train_path": "/Users/petar/scaling_laws/data/fibonacci/train.memmap",
