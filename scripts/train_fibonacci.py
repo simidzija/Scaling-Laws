@@ -20,7 +20,7 @@ if __name__ == '__main__':
         metadata = json.load(f)
         vocab_size = metadata['max_int']
         seq_len = metadata['seq_len']
-        train_path = metadata['train_path']
+        data_path = metadata['train_path']
         n_seeds = metadata['n_seeds']
         max_int = metadata['max_int']
 
@@ -37,17 +37,20 @@ if __name__ == '__main__':
     
     n_batches = 1000
     batch_size = 32
+    checkpoint_dir = str(ROOT/'checkpoints/fibonacci')
     n_different_seqs = vocab_size ** n_seeds
 
     losses = train(model=model,
                    device='cpu',
-                   train_path=train_path,
+                   data_path=data_path,
                    data_dtype=np.int16,
                    n_batches=n_batches,
                    batch_size=batch_size,
                    seq_len=seq_len,
                    lr=0.001,
-                   print_period=10)
+                   print_period=10,
+                   checkpoint_dir=checkpoint_dir,
+                   checkpoint_period = 100)
 
     plt.plot(losses, label='train loss')
     plt.axhline(irreducible_loss, color='k', ls='--', label='irreducible loss')

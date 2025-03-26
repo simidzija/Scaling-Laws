@@ -1,5 +1,6 @@
 # Standard library
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Optional
@@ -9,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
+from torch import Tensor
 from torch.amp import autocast, GradScaler  # automatic mixed precision
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
@@ -25,19 +27,19 @@ from model import Transformer
 
 def train(model: Transformer,
           device: torch.device,
-          train_path: str,
+          data_path: str,
           data_dtype: torch.dtype,
           n_batches: int,
           batch_size: int,
           seq_len: int,
           lr: float=0.001,
-          print_period: Optional[int]=None) -> None:
+          print_period: Optional[int]=None,
+          checkpoint_dir: Optional[str] = None,
+          checkpoint_period: Optional[int] = None) -> None:
 
     # move model to device
     model.to(device)
-
-    # loss function
-    loss_fn = nn.CrossEntropyLoss()
+    model.train()
 
     # optimizer
     optim = AdamW(model.parameters(), lr=lr)
@@ -46,19 +48,26 @@ def train(model: Transformer,
     lr_scheduler = CosineAnnealingLR(optim, T_max=n_batches, eta_min=lr/10)
 
     # grad scaler
-    if device == 'cuda':
-        scaler = GradScaler()
+    scaler = GradScaler() if device == 'cuda' else None
 
-    # create dataset
+    # loss function
+    loss_fn = nn.CrossEntropyLoss()
+
+    # dataset
     n_seqs = n_batches * batch_size
-    dataset = MemmapDataset(train_path, n_seqs=n_seqs, seq_len=seq_len, dtype=data_dtype)
+    dataset = MemmapDataset(data_path, n_seqs=n_seqs, seq_len=seq_len, dtype=data_dtype)
 
-    # create dataloader
+    # dataloader
     dataloader = DataLoader(dataset, 
                             batch_size=batch_size, 
                             num_workers=4,
                             pin_memory=device == 'cuda',
                             persistent_workers=True)
+
+    # create checkpoint directory
+    if checkpoint_dir:
+        os.makedirs(checkpoint_dir, exist_ok=True)
+        # TODO: make metadata.json
     
     # loss list
     losses = []
@@ -106,6 +115,28 @@ def train(model: Transformer,
         if print_period and batch % print_period == 0:
             print(f'batch {batch:3d}/{n_batches}: loss = {loss.item():10.5f}')
 
+        # checkpoint
+        if checkpoint_period and batch % checkpoint_period == 0:
+            checkpoint = {
+                'batch': batch,
+                'model': to_cpu(model.state_dict()),
+                'optim': to_cpu(optim.state_dict()),
+                'lr_scheduler': to_cpu(lr_scheduler.state_dict()),
+                'scaler': to_cpu(scaler.state_dict()) if scaler else None,
+                'loss': loss.item()
+            }
+            path = checkpoint_dir + f'/checkpoint_batch_{batch}.pt'
+            torch.save(checkpoint, path)
+
     return losses
 
+
+def to_cpu(obj):
+    if isinstance(obj, Tensor):
+        return obj.cpu()
+    elif isinstance(obj, dict):
+        return {k: to_cpu(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [to_cpu(x) for x in obj]
+    return obj
 

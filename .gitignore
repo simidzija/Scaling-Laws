@@ -1,6 +1,6 @@
 *__pycache__*
 .pytest_cache
-data/tiny_stories
 archive
-notes.txt
+checkpoints/
+data/tiny_stories
 rough
