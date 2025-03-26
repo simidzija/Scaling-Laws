@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parent.parent
 class MemmapDataset(Dataset):
     def __init__(self, 
                  data_path: str,
+                 start_seq: int,
                  n_seqs: int,
                  seq_len: int,
                  dtype: np.dtype) -> None:
@@ -28,7 +29,8 @@ class MemmapDataset(Dataset):
         self.data: Optional[np.memmap] = None
         self.n_seqs = n_seqs
         self.seq_len = seq_len
-        self.dtype = dtype
+        self.dtype = np.dtype(dtype)
+        self.offset = start_seq * seq_len * self.dtype.itemsize
         self.data_shape = (n_seqs, seq_len)
 
     def __getitem__(self, idx: int) -> np.ndarray:
@@ -44,6 +46,7 @@ class MemmapDataset(Dataset):
     def init_data(self):
         self.data = np.memmap(self.data_path,
                               mode='r', 
+                              offset=self.offset,
                               dtype=self.dtype,
                               shape=self.data_shape)
         
@@ -214,12 +217,12 @@ def create_fibonacci(metadata_path: str,
 if __name__ == '__main__':
     # create_tiny_stories()
 
-    create_fibonacci(metadata_path=str(ROOT / 'data/fibonacci/metadata.json'),
-                     train_path=str(ROOT / 'data/fibonacci/train.memmap'),
-                     test_path=str(ROOT / 'data/fibonacci/test.memmap'),
-                     n_seeds=2,
-                     max_int=10,
-                     n_train_seqs=10**5)
+    # create_fibonacci(metadata_path=str(ROOT / 'data/fibonacci/metadata.json'),
+    #                  train_path=str(ROOT / 'data/fibonacci/train.memmap'),
+    #                  test_path=str(ROOT / 'data/fibonacci/test.memmap'),
+    #                  n_seeds=2,
+    #                  max_int=10,
+    #                  n_train_seqs=10**5)
 
-    # data = load_memmap(str(ROOT / 'data/fibonacci/test.memmap'), dtype=np.int16)
-    # print(data[:64])
+    data = load_memmap(str(ROOT / 'data/fibonacci/test.memmap'), dtype=np.int16)
+    print(data[30:40])
