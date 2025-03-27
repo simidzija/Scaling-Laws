@@ -1,5 +1,5 @@
 # Standard library
-from typing import Iterable, Optional
+from typing import Optional
 
 # Third-party
 import numpy as np
@@ -25,6 +25,12 @@ class Transformer(nn.Module):
         self.n_heads = n_heads
         self.n_blocks = n_blocks
         self.p_drop = p_drop
+        self.hyperparams_dict = {'vocab_size': vocab_size,
+                                 'd_model': d_model,
+                                 'max_seq_len': max_seq_len,
+                                 'n_heads': n_heads,
+                                 'n_blocks': n_blocks,
+                                 'p_drop': p_drop}
         
         # Layers
         self.embed = nn.Embedding(vocab_size, d_model)
