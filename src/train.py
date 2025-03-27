@@ -1,19 +1,17 @@
 # Standard library
-import json
 import os
 import sys
 from pathlib import Path
 from typing import Optional
 
 # Third-party
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
 from torch import Tensor
-from torch.amp import autocast, GradScaler  # automatic mixed precision
-from torch.optim import AdamW
-from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.amp import autocast, GradScaler
+from torch.optim import AdamW, Optimizer
+from torch.optim.lr_scheduler import CosineAnnealingLR, LRScheduler
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -25,61 +23,155 @@ sys.path.append(str(ROOT/'src'))
 from data import MemmapDataset
 from model import Transformer
 
+def train_from_scratch(model: Transformer,
+                       device: torch.device | str,
+                       data_path: str,
+                       data_dtype: np.dtype | str,
+                       total_batches: int,
+                       batch_size: int,
+                       seq_len: int,
+                       lr: float=0.001,
+                       print_period: Optional[int]=None,
+                       checkpoint_dir: Optional[str] = None,
+                       checkpoint_period: Optional[int] = None) -> None:
+    
+    # device and dtype
+    device = torch.device(device)
+    data_dtype = np.dtype(data_dtype)
+
+    # define optimizer, lr scheduler, grad scaler
+    optim = AdamW(model.parameters(), lr=lr)
+    lr_scheduler = CosineAnnealingLR(optim, T_max=total_batches, eta_min=lr/10)
+    scaler = GradScaler() if device.type == 'cuda' else None
+
+    return train(model=model,
+                 optim=optim,
+                 lr_scheduler=lr_scheduler,
+                 scaler=scaler,
+                 device=device,
+                 data_path=data_path,
+                 data_dtype=data_dtype,
+                 start_batch=0,
+                 total_batches=total_batches,
+                 batch_size=batch_size,
+                 seq_len=seq_len,
+                 print_period=print_period,
+                 checkpoint_dir=checkpoint_dir,
+                 checkpoint_period=checkpoint_period)
+
+def train_from_checkpoint(checkpoint_path: str,
+                          device: torch.device | str,
+                          data_path: str,
+                          data_dtype: np.dtype | str,
+                          total_batches: int,
+                          batch_size: int,
+                          seq_len: int,
+                          print_period: Optional[int]=None,
+                          checkpoint_dir: Optional[str] = None,
+                          checkpoint_period: Optional[int] = None) -> None:
+
+    # device and dtype
+    device = torch.device(device)
+    data_dtype = np.dtype(data_dtype)
+
+    # load checkpoint
+    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
+
+    # load batch
+    start_batch = checkpoint['batch']
+    print(f'Restarting training from batch {start_batch} / {total_batches}.')
+
+    # load model
+    model = Transformer(**checkpoint['model_hyperparameters'])
+    model.load_state_dict(checkpoint['model_state_dict'])
+
+    # load optim
+    optim = AdamW(model.parameters())
+    optim.load_state_dict(checkpoint['optim_state_dict'])
+
+    # load lr scheduler
+    lr_scheduler = CosineAnnealingLR(optim, T_max=total_batches)
+    lr_scheduler.load_state_dict(checkpoint['lr_scheduler_state_dict'])
+
+    # load scaler
+    if device.type == 'cuda':
+        scaler = GradScaler()
+        scaler.load_state_dict(checkpoint['scaler_state_dict'])
+    else:
+        scaler = None
+
+    return train(model=model,
+                 optim=optim,
+                 lr_scheduler=lr_scheduler,
+                 scaler=scaler,
+                 device=device,
+                 data_path=data_path,
+                 data_dtype=data_dtype,
+                 start_batch=start_batch,
+                 total_batches=total_batches,
+                 batch_size=batch_size,
+                 seq_len=seq_len,
+                 print_period=print_period,
+                 checkpoint_dir=checkpoint_dir,
+                 checkpoint_period=checkpoint_period)
+
 def train(model: Transformer,
-          device: torch.device,
+          optim: Optimizer,
+          lr_scheduler: LRScheduler,
+          scaler: Optional[GradScaler],
+          device: torch.device | str,
           data_path: str,
-          data_dtype: torch.dtype,
-          n_batches: int,
+          data_dtype: np.dtype | str,
+          start_batch: int,
+          total_batches: int,
           batch_size: int,
           seq_len: int,
-          lr: float=0.001,
           print_period: Optional[int]=None,
           checkpoint_dir: Optional[str] = None,
           checkpoint_period: Optional[int] = None) -> None:
 
-    # move model to device
+    # device and dtype
+    device = torch.device(device)
+    data_dtype = np.dtype(data_dtype)
+
+    # move model to device and put in train mode
     model.to(device)
     model.train()
-
-    # optimizer
-    optim = AdamW(model.parameters(), lr=lr)
-
-    # lr scheduler
-    lr_scheduler = CosineAnnealingLR(optim, T_max=n_batches, eta_min=lr/10)
-
-    # grad scaler
-    scaler = GradScaler() if device == 'cuda' else None
 
     # loss function
     loss_fn = nn.CrossEntropyLoss()
 
     # dataset
-    n_seqs = n_batches * batch_size
-    dataset = MemmapDataset(data_path, n_seqs=n_seqs, seq_len=seq_len, dtype=data_dtype)
+    start_seq = start_batch * batch_size
+    n_seqs = (total_batches - start_batch) * batch_size
+    dataset = MemmapDataset(data_path, 
+                            start_seq=start_seq,
+                            n_seqs=n_seqs, 
+                            seq_len=seq_len, 
+                            dtype=data_dtype)
 
     # dataloader
     dataloader = DataLoader(dataset, 
                             batch_size=batch_size, 
                             num_workers=4,
-                            pin_memory=device == 'cuda',
+                            pin_memory=device.type == 'cuda',
                             persistent_workers=True)
-
-    # create checkpoint directory
-    if checkpoint_dir:
-        os.makedirs(checkpoint_dir, exist_ok=True)
-        # TODO: make metadata.json
     
+    # use grad scaler only if device is cuda
+    scaler = scaler if device.type == 'cuda' else None
+
     # loss list
     losses = []
 
     # training loop
-    for batch, data in tqdm(enumerate(dataloader), total=len(dataloader)):
+    for batch, data in tqdm(enumerate(dataloader, start_batch), 
+                            total=len(dataloader)):
 
         # move data to device
         data = data.to(device=device, dtype=torch.int32, non_blocking=True)
 
         # automatically use FP16 precision when safe, FP32 otherwise
-        with autocast(device_type=device):
+        with autocast(device_type=device.type):
 
             # logits (omit last token; shape (seq, token, logits))
             logits: torch.Tensor = model(data[:, :-1]).permute(0, 2, 1)
@@ -91,45 +183,62 @@ def train(model: Transformer,
             loss: torch.Tensor = loss_fn(logits, truth.to(torch.int64))
             losses.append(loss.item())
 
-        # backward on scaled loss
+        # backprop and step
         optim.zero_grad()
-        if device == 'cuda':
+
+        if scaler:
             scaler.scale(loss).backward()
+            scaler.step()
+            scaler.update()
         else:
             loss.backward()
-
-        # optim step
-        if device == 'cuda':
-            scaler.step(optim)
-        else:
             optim.step()
-
-        # update scaler
-        if device == 'cuda':
-            scaler.update()
 
         # lr step
         lr_scheduler.step()
 
         # print
         if print_period and batch % print_period == 0:
-            print(f'batch {batch:3d}/{n_batches}: loss = {loss.item():10.5f}')
+            print(f'batch {batch:3d}/{total_batches}: loss = {loss.item():10.5f}')
 
         # checkpoint
         if checkpoint_period and batch % checkpoint_period == 0:
-            checkpoint = {
-                'batch': batch,
-                'model': to_cpu(model.state_dict()),
-                'optim': to_cpu(optim.state_dict()),
-                'lr_scheduler': to_cpu(lr_scheduler.state_dict()),
-                'scaler': to_cpu(scaler.state_dict()) if scaler else None,
-                'loss': loss.item()
-            }
-            path = checkpoint_dir + f'/checkpoint_batch_{batch}.pt'
-            torch.save(checkpoint, path)
+            save_checkpoint(checkpoint_dir=checkpoint_dir,
+                            batch=batch,
+                            model=model,
+                            optim=optim,
+                            lr_scheduler=lr_scheduler,
+                            scaler=scaler,
+                            loss=loss.item())
 
     return losses
 
+
+def save_checkpoint(checkpoint_dir: str,
+                    batch: int,
+                    model: Transformer,
+                    optim: AdamW,
+                    lr_scheduler: CosineAnnealingLR,
+                    scaler: GradScaler,
+                    loss: float) -> None:
+    # create directory
+    if checkpoint_dir:
+        os.makedirs(checkpoint_dir, exist_ok=True)
+
+    # create checkpoint
+    checkpoint = {
+        'batch': batch,
+        'model_hyperparameters': model.hyperparams_dict,
+        'model_state_dict': to_cpu(model.state_dict()),
+        'optim_state_dict': to_cpu(optim.state_dict()),
+        'lr_scheduler_state_dict': to_cpu(lr_scheduler.state_dict()),
+        'scaler_state_dict': to_cpu(scaler.state_dict()) if scaler else None,
+        'loss': loss
+    }
+
+    # save checkpoint
+    path = checkpoint_dir + f'/checkpoint_batch_{batch}.pt'
+    torch.save(checkpoint, path)
 
 def to_cpu(obj):
     if isinstance(obj, Tensor):
