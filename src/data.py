@@ -1,6 +1,5 @@
 # Standard library
 import json
-import sys
 from pathlib import Path
 from typing import Iterable, Iterator, Optional
 
@@ -21,7 +20,7 @@ ROOT = Path(__file__).resolve().parent.parent
 class MemmapDataset(Dataset):
     def __init__(self, 
                  data_path: str,
-                 start_seq: int,
+                 start_seq: Optional[int],
                  n_seqs: int,
                  seq_len: int,
                  dtype: np.dtype | str) -> None:
@@ -30,7 +29,8 @@ class MemmapDataset(Dataset):
         self.n_seqs = n_seqs
         self.seq_len = seq_len
         self.dtype = np.dtype(dtype)
-        self.offset = start_seq * seq_len * self.dtype.itemsize
+        self.start_seq = 0 if start_seq is None else start_seq
+        self.offset = self.start_seq * seq_len * self.dtype.itemsize
         self.data_shape = (n_seqs, seq_len)
 
     def __getitem__(self, idx: int) -> np.ndarray:
