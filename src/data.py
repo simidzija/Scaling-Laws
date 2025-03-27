@@ -24,7 +24,7 @@ class MemmapDataset(Dataset):
                  start_seq: int,
                  n_seqs: int,
                  seq_len: int,
-                 dtype: np.dtype) -> None:
+                 dtype: np.dtype | str) -> None:
         self.data_path = data_path
         self.data: Optional[np.memmap] = None
         self.n_seqs = n_seqs
@@ -53,8 +53,9 @@ class MemmapDataset(Dataset):
 
 ##################################  Load data  #################################
 
-def load_memmap(path: str, dtype: np.dtype) -> np.memmap:
-    return np.memmap(path, mode='r', dtype=dtype)
+def load_memmap(path: str, dtype: np.dtype | str) -> np.memmap:
+
+    return np.memmap(path, mode='r', dtype=np.dtype(dtype))
 
 ##############################  Data processing  ###############################
 
@@ -76,7 +77,14 @@ def create_tokenizer(iterable: Iterable[str],
     # Save
     tokenizer.save(savepath)
 
-def tokenize(iterable: Iterable[str], savepath: str, tokenizer_path: str, filetype: str, dtype: np.dtype) -> None:
+def tokenize(iterable: Iterable[str], 
+             savepath: str, 
+             tokenizer_path: str, 
+             filetype: str, 
+             dtype: np.dtype | str) -> None:
+
+    # dtype
+    dtype = np.dtype(dtype)
 
     # Create token handler
     handlers = {
@@ -112,14 +120,17 @@ def get_hf_iterator(path: str) -> Iterator[str]:
 
 ############################  Filetype handlers  ##############################
 
-def npy_handler(tokens: list[int], tokens_path: str, dtype: np.dtype) -> None:
+def npy_handler(tokens: list[int], tokens_path: str, dtype: np.dtype | str) -> None:
     # create array
-    data = np.array(tokens, dtype=dtype)  
+    data = np.array(tokens, dtype=np.dtype(dtype))  
 
     # save to file
     np.save(tokens_path, data)
 
-def memmap_handler(tokens: list[int], tokens_path: str, dtype: np.dtype) -> None:
+def memmap_handler(tokens: list[int], tokens_path: str, dtype: np.dtype | str) -> None:
+    # dtype 
+    dtype = np.dtype(dtype)
+
     # create array
     data = np.memmap(filename=tokens_path,
                      dtype=dtype,
@@ -162,7 +173,7 @@ def create_fibonacci(metadata_path: str,
                      max_int: int=20,
                      n_train_seqs: int=10**6,
                      n_test_seqs: int=100,
-                     dtype: np.dtype=np.int16) -> None:
+                     dtype: np.dtype | str='int16') -> None:
     """
     Dataset of integer sequences.
     Each sequence starts with n_seeds random integers, and subsequent elements in the sequence are sums of the previous n_seeds elements, modulo max_int.
@@ -177,7 +188,10 @@ def create_fibonacci(metadata_path: str,
         seq[-1] = eos
         return seq
 
-    ## metadata
+    # dtype
+    dtype = np.dtype(dtype)
+
+    # metadata
     metadata_dict = {'seq_len': seq_len,
                      'n_seeds': n_seeds,
                      'sos': sos,
@@ -192,7 +206,7 @@ def create_fibonacci(metadata_path: str,
     with open(metadata_path, 'w') as f:
         json.dump(metadata_dict, f, indent=2)
 
-    ## train data
+    # train data
     print(f'Creating train data:')
     shape = (n_train_seqs * seq_len,)
     data = np.memmap(filename=train_path, dtype=dtype, mode='w+', shape=shape)
@@ -201,7 +215,7 @@ def create_fibonacci(metadata_path: str,
         data[i * seq_len : (i + 1) * seq_len] = create_seq()
     data.flush()
 
-    ## test data
+    # test data
     print('Creating test data')
     shape = (n_test_seqs * seq_len,)
     data = np.memmap(filename=test_path, dtype=dtype, mode='w+', shape=shape)
@@ -224,5 +238,5 @@ if __name__ == '__main__':
     #                  max_int=10,
     #                  n_train_seqs=10**5)
 
-    data = load_memmap(str(ROOT / 'data/fibonacci/test.memmap'), dtype=np.int16)
+    data = load_memmap(str(ROOT / 'data/fibonacci/test.memmap'), dtype='int16')
     print(data[30:40])
