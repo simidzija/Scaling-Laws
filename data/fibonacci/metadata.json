@@ -9,5 +9,5 @@
   "metadata_path": "/Users/petar/scaling_laws/data/fibonacci/metadata.json",
   "train_path": "/Users/petar/scaling_laws/data/fibonacci/train.memmap",
   "test_path": "/Users/petar/scaling_laws/data/fibonacci/test.memmap",
-  "dtype": "<class 'numpy.int16'>"
+  "dtype": "int16"
 }
