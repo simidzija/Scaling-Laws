@@ -8,7 +8,6 @@ from typing import Optional
 import numpy as np
 import torch
 import torch.nn as nn
-from torch import Tensor
 from torch.amp import autocast, GradScaler
 from torch.optim import AdamW, Optimizer
 from torch.optim.lr_scheduler import CosineAnnealingLR, LRScheduler
@@ -22,6 +21,7 @@ sys.path.append(str(ROOT/'src'))
 # Local
 from data import MemmapDataset
 from model import Transformer
+from utils import copy, move_module, move_optim_state_dict
 
 def train_from_scratch(model: Transformer,
                        device: torch.device | str,
@@ -83,20 +83,25 @@ def train_from_checkpoint(checkpoint_path: str,
 
     # load model
     model = Transformer(**checkpoint['model_hyperparameters'])
-    model.load_state_dict(checkpoint['model_state_dict'])
+    state_dict = checkpoint['model_state_dict']
+    model.load_state_dict(state_dict)
 
     # load optim
     optim = AdamW(model.parameters())
-    optim.load_state_dict(checkpoint['optim_state_dict'])
+    state_dict = checkpoint['optim_state_dict']
+    move_optim_state_dict(state_dict, device)  # keeps step tensors on cpu
+    optim.load_state_dict(state_dict)
 
     # load lr scheduler
     lr_scheduler = CosineAnnealingLR(optim, T_max=total_batches)
-    lr_scheduler.load_state_dict(checkpoint['lr_scheduler_state_dict'])
+    state_dict = checkpoint['lr_scheduler_state_dict']
+    lr_scheduler.load_state_dict(state_dict)
 
     # load scaler
     if device.type == 'cuda':
         scaler = GradScaler()
-        scaler.load_state_dict(checkpoint['scaler_state_dict'])
+        state_dict = checkpoint['scaler_state_dict']
+        scaler.load_state_dict(state_dict)
     else:
         scaler = None
 
@@ -135,7 +140,7 @@ def train(model: Transformer,
     data_dtype = np.dtype(data_dtype)
 
     # move model to device and put in train mode
-    model.to(device)
+    move_module(model, device)
     model.train()
 
     # loss function
@@ -221,6 +226,7 @@ def save_checkpoint(checkpoint_dir: str,
                     lr_scheduler: CosineAnnealingLR,
                     scaler: GradScaler,
                     loss: float) -> None:
+
     # create directory
     if checkpoint_dir:
         os.makedirs(checkpoint_dir, exist_ok=True)
@@ -229,23 +235,14 @@ def save_checkpoint(checkpoint_dir: str,
     checkpoint = {
         'batch': batch,
         'model_hyperparameters': model.hyperparams_dict,
-        'model_state_dict': to_cpu(model.state_dict()),
-        'optim_state_dict': to_cpu(optim.state_dict()),
-        'lr_scheduler_state_dict': to_cpu(lr_scheduler.state_dict()),
-        'scaler_state_dict': to_cpu(scaler.state_dict()) if scaler else None,
+        'model_state_dict': copy(model.state_dict(), 'cpu'),
+        'optim_state_dict': copy(optim.state_dict(), 'cpu'),
+        'lr_scheduler_state_dict': copy(lr_scheduler.state_dict(), 'cpu'),
+        'scaler_state_dict': copy(scaler.state_dict(), 'cpu') if scaler else None,
         'loss': loss
     }
 
     # save checkpoint
     path = checkpoint_dir + f'/checkpoint_batch_{batch}.pt'
     torch.save(checkpoint, path)
-
-def to_cpu(obj):
-    if isinstance(obj, Tensor):
-        return obj.cpu()
-    elif isinstance(obj, dict):
-        return {k: to_cpu(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [to_cpu(x) for x in obj]
-    return obj
 
