@@ -15,6 +15,7 @@ class Transformer(nn.Module):
                  max_seq_len: int,
                  n_heads: int,
                  n_blocks: int,
+                 device: torch.device | str,
                  p_drop: float=0.0) -> None:
         super().__init__()
 
@@ -25,20 +26,23 @@ class Transformer(nn.Module):
         self.n_heads = n_heads
         self.n_blocks = n_blocks
         self.p_drop = p_drop
+        self.device = torch.device(device)
         self.hyperparams_dict = {'vocab_size': vocab_size,
                                  'd_model': d_model,
                                  'max_seq_len': max_seq_len,
                                  'n_heads': n_heads,
                                  'n_blocks': n_blocks,
-                                 'p_drop': p_drop}
+                                 'p_drop': p_drop,
+                                 'device': device}
         
         # Layers
-        self.embed = nn.Embedding(vocab_size, d_model)
-        self.pe = PositionalEncoding(d_model, max_seq_len)
+        self.embed = nn.Embedding(vocab_size, d_model, device=device)
+        self.pe = PositionalEncoding(d_model, max_seq_len, device=device)
         self.dropout = nn.Dropout(p_drop)
-        self.blocks = nn.Sequential(*[Block(d_model, n_heads, p_drop) 
-                                      for _ in range(n_blocks)])
-        self.ln = nn.LayerNorm(d_model)
+        self.blocks = nn.Sequential(
+            *[Block(d_model, n_heads, p_drop, device=device) 
+              for _ in range(n_blocks)])
+        self.ln = nn.LayerNorm(d_model, device=device)
         self.deembed = DeEmbedding(self.embed)
 
     def forward(self, x: Tensor) -> Tensor:
@@ -84,19 +88,24 @@ class Transformer(nn.Module):
 ##################################  Layers  ###################################
 
 class Block(nn.Module):
-    def __init__(self, d_model: int, n_heads: int, p_drop: float) -> None:
+    def __init__(self, 
+                 d_model: int, 
+                 n_heads: int, 
+                 p_drop: float,
+                 device: torch.device | str) -> None:
         super().__init__()
 
         self.d_model = d_model
         self.n_heads = n_heads
         self.p_drop = p_drop
+        self.device = torch.device(device)
 
         # Layers
-        self.ln_mha = nn.LayerNorm(d_model)
-        self.ln_ff = nn.LayerNorm(d_model)
+        self.ln_mha = nn.LayerNorm(d_model, device=device)
+        self.ln_ff = nn.LayerNorm(d_model, device=device)
         self.dropout = nn.Dropout(p_drop)
-        self.mha = MultiheadAttention(d_model, n_heads, p_drop)
-        self.ff = FeedForward(d_model)
+        self.mha = MultiheadAttention(d_model, n_heads, p_drop, device=device)
+        self.ff = FeedForward(d_model, device=device)
 
     def forward(self, x: Tensor) -> Tensor:
         # Multi-head attention
@@ -115,18 +124,26 @@ class Block(nn.Module):
         return y
 
 class MultiheadAttention(nn.Module):
-    def __init__(self, d_model: int, n_heads: int, p_drop: int) -> None:
+    def __init__(self, 
+                 d_model: int, 
+                 n_heads: int, 
+                 p_drop: int,
+                 device: torch.device | str) -> None:
         super().__init__()
+
         if d_model % n_heads != 0:
             raise ValueError(f'n_heads ({n_heads}) does not divide d_model {d_model}.')
+
+        # hyperparameters
         self.d_model = d_model
         self.n_heads = n_heads
         self.head_size = d_model // n_heads
         self.p_drop = p_drop
+        self.device = device
 
         # Layers tensors
-        self.wqkv = nn.Linear(d_model, 3 * d_model)
-        self.wo = nn.Linear(d_model, d_model)
+        self.wqkv = nn.Linear(d_model, 3 * d_model, device=device)
+        self.wo = nn.Linear(d_model, d_model, device=device)
         self.softmax = nn.Softmax(-1)
         self.dropout = nn.Dropout(p_drop)
     
@@ -149,7 +166,8 @@ class MultiheadAttention(nn.Module):
         v  = v.reshape(b, s, h, f).permute(0, 2, 1, 3)  # (b, h, s, f)
 
         # Attention
-        mask = torch.full((s,s), -torch.inf).triu(1) if mask is None else mask
+        if mask is None:
+            mask = torch.full((s,s), -torch.inf, device=self.device).triu(1)
         scores = q @ kT / np.sqrt(f) + mask
         weights = self.softmax(scores)
         weights = self.dropout(weights)
@@ -166,14 +184,21 @@ class MultiheadAttention(nn.Module):
 
 
 class FeedForward(nn.Module):
-    def __init__(self, d_model: int) -> None:
+    def __init__(self, 
+                 d_model: int, 
+                 device: torch.device | str) -> None:
         super().__init__()
+
+        # hyperparameters
         self.d_model = d_model
+        self.device = device
 
         # Layers
-        self.layers = nn.Sequential(nn.Linear(d_model, 4 * d_model),
+        self.layers = nn.Sequential(nn.Linear(d_model, 4 * d_model, 
+                                              device=device),
                                     nn.ReLU(),
-                                    nn.Linear(4 * d_model, d_model))
+                                    nn.Linear(4 * d_model, d_model,
+                                              device=device))
 
     def forward(self, x: Tensor) -> Tensor:
         return self.layers(x)
@@ -197,13 +222,16 @@ class PositionalEncoding(nn.Module):
     def __init__(self, 
                  d_model: int, 
                  max_seq_len: int, 
-                 max_wavelen: int = 10000) -> None:
+                 max_wavelen: int=10000,
+                 device: torch.device | str='cpu') -> None:
         if d_model % 2 != 0:
             raise ValueError(f'd_model must be even but got {d_model}')
         super().__init__()
 
         self.d_model = d_model
         self.max_seq_len = max_seq_len
+        self.max_wavelen = max_wavelen
+        self.device = torch.device(device)
 
         # Wavelengths
         wavelen = max_wavelen ** (torch.arange(d_model // 2) / d_model)
@@ -215,7 +243,7 @@ class PositionalEncoding(nn.Module):
         pe[:, 1::2] = torch.cos(theta)
         
         # Register buffer
-        self.register_buffer('pe', pe)
+        self.register_buffer('pe', pe.to(device))
 
     def forward(self, x: Tensor) -> Tensor:
         seqlen = x.shape[-2]
