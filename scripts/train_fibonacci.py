@@ -36,10 +36,11 @@ if __name__ == '__main__':
                         d_model=64,
                         max_seq_len=seq_len,
                         n_heads=2,
-                        n_blocks=3)
+                        n_blocks=3,
+                        device='mps')
     
     # training hyperparams
-    device = 'cpu'
+    device = 'mps'
     total_batches = 1000
     batch_size = 32
     lr = 0.001
