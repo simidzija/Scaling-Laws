@@ -32,14 +32,14 @@ if __name__ == '__main__':
 
     # training hyperparams
     device = 'mps'
-    total_batches = 200
+    total_batches = 1000
     batch_size = 32
     seq_len = 64
     lr = 0.001
     print_period = 100
     checkpoint_dir = str(ROOT/'checkpoints/tiny_stories')
     checkpoint_period = 100
-    results_path = str(ROOT/'results/tiny_stories/results_2.json')
+    results_path = str(ROOT/'results/tiny_stories/results.json')
     
     # model
     model = Transformer(vocab_size=vocab_size,
@@ -82,7 +82,9 @@ if __name__ == '__main__':
 
     # plot
     batches = range(start_batch, total_batches)
+    random_guessing = np.log(vocab_size)
     plt.plot(batches, losses, label='train loss')
+    plt.axhline(random_guessing, label='random_guessing', color='k', ls='--')
     plt.xlabel('batch')
     plt.xlim(start_batch, total_batches)
     plt.yscale('log')
