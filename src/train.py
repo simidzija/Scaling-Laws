@@ -1,4 +1,5 @@
 # Standard library
+import json
 import os
 import sys
 from pathlib import Path
@@ -32,8 +33,9 @@ def train_from_scratch(model: Transformer,
                        seq_len: int,
                        lr: float=0.001,
                        print_period: Optional[int]=None,
-                       checkpoint_dir: Optional[str] = None,
-                       checkpoint_period: Optional[int] = None) -> None:
+                       checkpoint_dir: Optional[str]=None,
+                       checkpoint_period: Optional[int]=None,
+                       results_path: Optional[str]=None) -> None:
     
     # device and dtype
     device = torch.device(device)
@@ -57,7 +59,8 @@ def train_from_scratch(model: Transformer,
                  seq_len=seq_len,
                  print_period=print_period,
                  checkpoint_dir=checkpoint_dir,
-                 checkpoint_period=checkpoint_period)
+                 checkpoint_period=checkpoint_period,
+                 results_path=results_path)
 
 def train_from_checkpoint(checkpoint_path: str,
                           device: torch.device | str,
@@ -67,8 +70,9 @@ def train_from_checkpoint(checkpoint_path: str,
                           batch_size: int,
                           seq_len: int,
                           print_period: Optional[int]=None,
-                          checkpoint_dir: Optional[str] = None,
-                          checkpoint_period: Optional[int] = None) -> None:
+                          checkpoint_dir: Optional[str]=None,
+                          checkpoint_period: Optional[int]=None,
+                          results_path: Optional[str]=None) -> None:
 
     # device and dtype
     device = torch.device(device)
@@ -118,7 +122,8 @@ def train_from_checkpoint(checkpoint_path: str,
                  seq_len=seq_len,
                  print_period=print_period,
                  checkpoint_dir=checkpoint_dir,
-                 checkpoint_period=checkpoint_period)
+                 checkpoint_period=checkpoint_period,
+                 results_path=results_path)
 
 def train(model: Transformer,
           optim: Optimizer,
@@ -132,8 +137,9 @@ def train(model: Transformer,
           batch_size: int,
           seq_len: int,
           print_period: Optional[int]=None,
-          checkpoint_dir: Optional[str] = None,
-          checkpoint_period: Optional[int] = None) -> None:
+          checkpoint_dir: Optional[str]=None,
+          checkpoint_period: Optional[int]=None,
+          results_path: Optional[str]=None) -> None:
 
     # device and dtype
     device = torch.device(device)
@@ -207,14 +213,25 @@ def train(model: Transformer,
             print(f'batch {batch:3d}/{total_batches}: loss = {loss.item():10.5f}')
 
         # checkpoint
-        if checkpoint_period and batch % checkpoint_period == 0:
+        if checkpoint_period and (batch % checkpoint_period == 0 or 
+                                  batch == total_batches - 1):
             save_checkpoint(checkpoint_dir=checkpoint_dir,
                             batch=batch,
                             model=model,
                             optim=optim,
                             lr_scheduler=lr_scheduler,
                             scaler=scaler,
-                            loss=loss.item())
+                            losses=losses)
+
+    # save results
+    if results_path:
+        save_results(results_path=results_path,
+                    model=model,
+                    optim=optim,
+                    total_batches=total_batches,
+                    batch_size=batch_size,
+                    seq_len=seq_len,
+                    losses=losses)
 
     return losses
 
@@ -225,7 +242,7 @@ def save_checkpoint(checkpoint_dir: str,
                     optim: AdamW,
                     lr_scheduler: CosineAnnealingLR,
                     scaler: GradScaler,
-                    loss: float) -> None:
+                    losses: list[float]) -> None:
 
     # create directory
     if checkpoint_dir:
@@ -239,10 +256,35 @@ def save_checkpoint(checkpoint_dir: str,
         'optim_state_dict': copy(optim.state_dict(), 'cpu'),
         'lr_scheduler_state_dict': copy(lr_scheduler.state_dict(), 'cpu'),
         'scaler_state_dict': copy(scaler.state_dict(), 'cpu') if scaler else None,
-        'loss': loss
+        'losses': losses
     }
 
     # save checkpoint
     path = checkpoint_dir + f'/checkpoint_batch_{batch}.pt'
     torch.save(checkpoint, path)
 
+
+def save_results(results_path: str,
+                 model: Transformer,
+                 optim: torch.optim.Optimizer,
+                 total_batches: int,
+                 batch_size: int,
+                 seq_len: int,
+                 losses: list[float]):
+
+    # create results dict
+    results = {
+        'model_hyperparameters': model.hyperparams_dict,
+        'lr': optim.state_dict()['param_groups'][0]['lr'],
+        'total_batches': total_batches,
+        'batch_size': batch_size,
+        'seq_len': seq_len,
+        'losses': losses
+    }
+
+    # create directory
+    os.makedirs(os.path.dirname(results_path), exist_ok=True)
+
+    # save results
+    with open(results_path, 'w') as f:
+        json.dump(results, f, indent=4)

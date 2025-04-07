@@ -1,7 +1,9 @@
 # Standard library
+import random
 from typing import Any
 
 # Third-party
+import numpy as np
 import torch
 import torch.nn as nn
 from torch import Tensor
@@ -37,3 +39,11 @@ def print_optim_device(optim: torch.optim.Optimizer):
         print(f'group {group}:')
         for name, ten in state[group].items():
             print(f'  {name:10} is on {ten.device}')
+
+def set_seed(seed=42):
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
