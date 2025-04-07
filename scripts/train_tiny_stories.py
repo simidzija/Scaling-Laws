@@ -39,7 +39,7 @@ if __name__ == '__main__':
     print_period = 100
     checkpoint_dir = str(ROOT/'checkpoints/tiny_stories')
     checkpoint_period = 100
-    results_path = str(ROOT/'results/tiny_stories/results.json')
+    results_path = str(ROOT/'results/tiny_stories/results_2.json')
     
     # model
     model = Transformer(vocab_size=vocab_size,

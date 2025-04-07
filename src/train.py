@@ -143,6 +143,7 @@ def train(model: Transformer,
 
     # device and dtype
     device = torch.device(device)
+    accelerator = device.type != 'cpu'
     data_dtype = np.dtype(data_dtype)
 
     # move model to device and put in train mode
@@ -165,7 +166,7 @@ def train(model: Transformer,
     dataloader = DataLoader(dataset, 
                             batch_size=batch_size, 
                             num_workers=4,
-                            pin_memory=device.type == 'cuda',
+                            pin_memory=accelerator,
                             persistent_workers=True)
     
     # use grad scaler only if device is cuda
@@ -179,7 +180,7 @@ def train(model: Transformer,
                             total=len(dataloader)):
 
         # move data to device
-        data = data.to(device=device, dtype=torch.int32, non_blocking=True)
+        data = data.to(device=device, non_blocking=accelerator).to(torch.int32)
 
         # automatically use FP16 precision when safe, FP32 otherwise
         with autocast(device_type=device.type):
