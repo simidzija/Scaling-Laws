@@ -165,7 +165,7 @@ def train(model: Transformer,
     # dataloader
     dataloader = DataLoader(dataset, 
                             batch_size=batch_size, 
-                            num_workers=4,
+                            num_workers=2,
                             pin_memory=accelerator,
                             persistent_workers=True)
     
@@ -200,7 +200,7 @@ def train(model: Transformer,
 
         if scaler:
             scaler.scale(loss).backward()
-            scaler.step()
+            scaler.step(optim)
             scaler.update()
         else:
             loss.backward()
