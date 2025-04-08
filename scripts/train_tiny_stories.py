@@ -32,22 +32,23 @@ if __name__ == '__main__':
 
     # training hyperparams
     device = 'mps'
-    total_batches = 1000
+    total_batches = 100
     batch_size = 32
     seq_len = 64
     lr = 0.001
-    print_period = 100
+    print_period = 10
     checkpoint_dir = str(ROOT/'checkpoints/tiny_stories')
     checkpoint_period = 100
-    results_path = str(ROOT/'results/tiny_stories/results.json')
+    results_path = str(ROOT/'results/tiny_stories/results_2.json')
     
     # model
     model = Transformer(vocab_size=vocab_size,
-                        d_model=64,
+                        d_model=1024,
                         max_seq_len=seq_len,
-                        n_heads=2,
-                        n_blocks=3,
+                        n_heads=8,
+                        n_blocks=16,
                         device='mps')
+    print(f'model size = {model.n_bytes:.3E} bytes')
     
     # train from scratch
     start_batch = 0
