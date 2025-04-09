@@ -33,8 +33,8 @@ if __name__ == '__main__':
     # training hyperparams
     device = 'mps'
     total_batches = 100
-    batch_size = 32
-    seq_len = 64
+    batch_size = 16
+    seq_len = 256
     lr = 0.001
     print_period = 10
     checkpoint_dir = str(ROOT/'checkpoints/tiny_stories')
@@ -43,10 +43,10 @@ if __name__ == '__main__':
     
     # model
     model = Transformer(vocab_size=vocab_size,
-                        d_model=1024,
+                        d_model=1280,
                         max_seq_len=seq_len,
-                        n_heads=8,
-                        n_blocks=16,
+                        n_heads=10,
+                        n_blocks=24,
                         device='mps')
     print(f'model size = {model.n_bytes:.3E} bytes')
     
