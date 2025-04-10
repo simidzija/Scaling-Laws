@@ -145,24 +145,6 @@ def memmap_handler(tokens: list[int], tokens_path: str, dtype: np.dtype | str) -
 
 ################################  Create datasets  #############################
 
-def create_tiny_stories():
-    dataset_path = "roneneldan/TinyStories"
-    tokenizer_path = str(ROOT / 'data/tiny_stories/tokenizer.json')
-
-    ## create tokenizer
-    vocab_size = 10000
-    iterator = get_hf_iterator(dataset_path)
-    create_tokenizer(iterator, tokenizer_path, vocab_size)
-
-    ## tokenize
-    tokens_path = str(ROOT / 'data/tiny_stories/validation.memmap')
-    text_list = load_dataset(dataset_path)['validation']['text']
-    tokenize(text_list, tokens_path, tokenizer_path, filetype='memmap')
-
-    tokens_path = str(ROOT / 'data/tiny_stories/train.memmap')
-    text_list = load_dataset(dataset_path)['train']['text']
-    tokenize(text_list, tokens_path, tokenizer_path, filetype='memmap')
-
 def create_fibonacci(metadata_path: str,
                      train_path: str,
                      test_path: str,
@@ -224,19 +206,3 @@ def create_fibonacci(metadata_path: str,
         data[i * seq_len : (i + 1) * seq_len] = create_seq()
     data.flush()
     
-
-
-################################################################################
-
-if __name__ == '__main__':
-    # create_tiny_stories()
-
-    # create_fibonacci(metadata_path=str(ROOT / 'data/fibonacci/metadata.json'),
-    #                  train_path=str(ROOT / 'data/fibonacci/train.memmap'),
-    #                  test_path=str(ROOT / 'data/fibonacci/test.memmap'),
-    #                  n_seeds=2,
-    #                  max_int=10,
-    #                  n_train_seqs=10**5)
-
-    data = load_memmap(str(ROOT / 'data/fibonacci/test.memmap'), dtype='int16')
-    print(data[30:40])
