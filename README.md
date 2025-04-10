@@ -43,3 +43,4 @@ Indeed we find that decreasing the batch_size to 16 while increasing seq_len to 
 to fit on the GPU and it has no affect on the runtime (still 1.0 s/batch).
 Going to batch_size = 8 and seq_len = 512 however is too much; the training run crashes due to insufficient memory,
 presumably because the minor increase in attention activation memory pushes us past the memory capacity of the GPU.
+
