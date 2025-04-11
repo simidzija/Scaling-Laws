@@ -110,6 +110,7 @@ def tokenize(iterable: Iterable[str],
     handler(tokens, savepath, dtype=dtype)
 
 def get_hf_iterator(path: str) -> Iterator[str]:
+    """Returns iterator over text in Hugging Face dataset."""
     print('Loading dataset...', end='')
     dataset = load_dataset(path)
     print('Loading complete.')
