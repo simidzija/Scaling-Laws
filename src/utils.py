@@ -40,10 +40,43 @@ def print_optim_device(optim: torch.optim.Optimizer):
         for name, ten in state[group].items():
             print(f'  {name:10} is on {ten.device}')
 
-def set_seed(seed=42):
+def set_seed(seed: int=42) -> None:
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
     random.seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+
+def get_flops(vocab_size: int,
+              d_model: int,
+              n_heads: int,
+              n_blocks: int,
+              seq_len: int,
+              batch_size: int,
+              total_batches: int) -> int:
+    """
+    Number of flops during model training. See Appendix F of Chinchilla paper.
+    """
+    embeddings = 2 * seq_len * vocab_size * d_model
+    total_attention = (
+        2 * 3 * seq_len * d_model**2 +  # KQV projections
+        2 * seq_len**2 * d_model +      # K @ Q logits
+        3 * n_heads * seq_len**2 +      # softmax
+        2 * seq_len**2 + d_model +      # softmax @ V
+        2 * seq_len * d_model**2        # final linear
+    )
+    feed_forward = 2 * seq_len * 8 * d_model**2
+    deembdeddings = 2 * seq_len * d_model * vocab_size
+
+    total_forward_per_seq = (
+        embeddings + 
+        n_blocks * (total_attention + feed_forward) +
+        deembdeddings
+    )
+
+    total_backward_per_seq = 2 * total_forward_per_seq
+
+    n_seqs = batch_size * total_batches
+
+    return n_seqs * (total_forward_per_seq + total_backward_per_seq)
