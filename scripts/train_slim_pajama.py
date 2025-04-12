@@ -1,12 +1,10 @@
 # Standard library
-import json
 import sys
 from pathlib import Path
 
 # Third-party
 import matplotlib.pyplot as plt
 import numpy as np
-import torch
 
 # Root dir
 ROOT = Path(__file__).resolve().parent.parent
