@@ -3,6 +3,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from time import time
 from typing import Optional
 
 # Third-party
@@ -22,7 +23,7 @@ sys.path.append(str(ROOT/'src'))
 # Local
 from data import MemmapDataset
 from model import Transformer
-from utils import copy, move_module, move_optim_state_dict
+from utils import copy, get_flops, move_module, move_optim_state_dict
 
 def train_from_scratch(model: Transformer,
                        device: torch.device | str,
@@ -175,6 +176,9 @@ def train(model: Transformer,
     # loss list
     losses = []
 
+    # start timer
+    start_time = time()
+
     # training loop
     for batch, data in tqdm(enumerate(dataloader, start_batch), 
                             total=len(dataloader)):
@@ -224,15 +228,19 @@ def train(model: Transformer,
                             scaler=scaler,
                             losses=losses)
 
+    # end timer
+    train_time = time() - start_time
+
     # save results
     if results_path:
         save_results(results_path=results_path,
-                    model=model,
-                    optim=optim,
-                    total_batches=total_batches,
-                    batch_size=batch_size,
-                    seq_len=seq_len,
-                    losses=losses)
+                     model=model,
+                     optim=optim,
+                     total_batches=total_batches,
+                     batch_size=batch_size,
+                     seq_len=seq_len,
+                     losses=losses,
+                     train_time=train_time)
 
     return losses
 
@@ -271,10 +279,26 @@ def save_results(results_path: str,
                  total_batches: int,
                  batch_size: int,
                  seq_len: int,
-                 losses: list[float]):
+                 losses: list[float],
+                 train_time: float):
+
+    # main info
+    n_params = model.n_params
+    n_tokens = seq_len * batch_size * total_batches
+    n_flops = get_flops(vocab_size=model.vocab_size,
+                        d_model=model.d_model,
+                        n_heads=model.n_heads,
+                        n_blocks=model.n_blocks,
+                        seq_len=seq_len,
+                        batch_size=batch_size,
+                        total_batches=total_batches)
 
     # create results dict
     results = {
+        'n_params': n_params,
+        'n_tokens': n_tokens,
+        'n_flops': n_flops,
+        'train_time': train_time,
         'model_hyperparameters': model.hyperparams_dict,
         'lr': optim.state_dict()['param_groups'][0]['lr'],
         'total_batches': total_batches,
