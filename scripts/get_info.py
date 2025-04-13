@@ -2,6 +2,9 @@
 import sys
 from pathlib import Path
 
+# Third-party
+import yaml
+
 # Root dir
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.append(str(ROOT/'src'))
@@ -11,16 +14,23 @@ from model import Transformer
 from utils import get_flops
 
 if __name__ == '__main__':
+    # config
+    with open(ROOT/'config.yaml', 'r') as file:
+        config = yaml.safe_load(file)
+    
+    # run
+    run = config[-1]
+
     # model hyperparams
-    vocab_size = 32000
-    d_model = 1280
-    n_heads = 10
-    n_blocks = 24
+    vocab_size = run['vocab_size']
+    d_model = run['d_model']
+    n_heads = run['n_heads']
+    n_blocks = run['n_blocks']
 
     # training hyperparams
-    seq_len = 256
-    batch_size = 16
-    total_batches = 200
+    total_batches = run['total_batches']
+    batch_size = run['batch_size']
+    seq_len = run['seq_len']
     n_tokens = seq_len * batch_size * total_batches
 
     # create model
@@ -47,7 +57,8 @@ if __name__ == '__main__':
 
     # print info
     print('---------------------- MODEL TRAINING INFO  -----------------------')
-    print(f'n_params = {n_params:,}')
-    print(f'n_tokens = {n_tokens:,}')
-    print(f'n_flops  = {n_flops_accurate:.2e}')
+    print(f'n_params = {n_params:_}')
+    print(f'n_tokens = {n_tokens:_}')
+    print(f'         = {n_tokens / n_params:.3} * n_params')
+    print(f'n_flops  = {n_flops_accurate:_}')
     print(f'         = {n_flops_accurate / n_flops_approx:.3} * 6ND')

@@ -1,10 +1,12 @@
 # Standard library
+import os
 import sys
 from pathlib import Path
 
 # Third-party
 import matplotlib.pyplot as plt
 import numpy as np
+import yaml
 
 # Root dir
 ROOT = Path(__file__).resolve().parent.parent
@@ -19,71 +21,53 @@ from utils import set_seed
 if __name__ == '__main__':
     # seed
     set_seed()
+
+    # config
+    with open(ROOT/'config.yaml', 'r') as file:
+        config = yaml.safe_load(file)
+    
+    # run
+    run_number = len(config) - 1
+    run = config[run_number]
+
+    # device
+    device = 'mps'
     
     # data
     data_path = str(ROOT/'data/slim_pajama/data_10M.memmap')
     data_dtype = np.dtype('int16')
 
-    # training hyperparams
-    device = 'mps'
-    vocab_size = 32000
-    total_batches = 200
-    batch_size = 16
-    seq_len = 256
-    lr = 0.001
+    # checkpoint
+    checkpoint_dir = str(ROOT/f'checkpoints/slim_pajama_{run_number}')
+    checkpoint_period = run['total_batches'] // 10
+
+    # results
+    results_path = str(ROOT/f'results/slim_pajama/results_{run_number}.json')
+    if os.path.exists(results_path):
+        raise RuntimeError(f"results path {results_path} already exists. Please specify another path so that existing results aren't overwritten")
+
+    # progress
     print_period = 10
-    checkpoint_dir = str(ROOT/'checkpoints/slim_pajama')
-    checkpoint_period = 100
-    results_path = str(ROOT/'results/slim_pajama/results.json')
     
     # model
-    model = Transformer(vocab_size=vocab_size,
-                        d_model=128,
-                        max_seq_len=seq_len,
-                        n_heads=2,
-                        n_blocks=3,
+    model = Transformer(vocab_size=run['vocab_size'],
+                        d_model=run['d_model'],
+                        max_seq_len=run['seq_len'],
+                        n_heads=run['n_heads'],
+                        n_blocks=run['n_blocks'],
                         device='mps')
-    print(f'Training {model.n_params:,} parameter model.')
     
-    # train from scratch
-    # start_batch = 0
-    # losses = train_from_scratch(model=model,
-    #                             device=device,
-    #                             data_path=data_path,
-    #                             data_dtype=data_dtype,
-    #                             total_batches=total_batches,
-    #                             batch_size=batch_size,
-    #                             seq_len=seq_len,
-    #                             lr=lr,
-    #                             print_period=print_period,
-    #                             checkpoint_dir=checkpoint_dir,
-    #                             checkpoint_period=checkpoint_period,
-    #                             results_path=results_path)
-
-    # train from checkpoint
-    start_batch = 100
-    checkpoint_path = checkpoint_dir + f'/checkpoint_batch_{start_batch}.pt'
-
-    losses = train_from_checkpoint(checkpoint_path=checkpoint_path,
-                                   device=device,
-                                   data_path=data_path,
-                                   data_dtype=data_dtype,
-                                   total_batches=total_batches,
-                                   batch_size=batch_size,
-                                   seq_len=seq_len,
-                                   print_period=print_period,
-                                   checkpoint_dir=checkpoint_dir,
-                                   checkpoint_period=checkpoint_period,
-                                   results_path=results_path)
-
-    # plot
-    batches = range(start_batch, total_batches)
-    random_guessing = np.log(vocab_size)
-    plt.plot(batches, losses, label='train loss')
-    plt.axhline(random_guessing, label='random_guessing', color='k', ls='--')
-    plt.xlabel('batch')
-    plt.xlim(start_batch, total_batches)
-    plt.yscale('log')
-    plt.title(f'Slim pajama')
-    plt.legend()
-    plt.show()
+    # train
+    print(f'Training {model.n_params:,} parameter model.')
+    train_from_scratch(model=model,
+                       device=device,
+                       data_path=data_path,
+                       data_dtype=data_dtype,
+                       total_batches=run['total_batches'],
+                       batch_size=run['batch_size'],
+                       seq_len=run['seq_len'],
+                       lr=run['lr'],
+                       print_period=print_period,
+                       checkpoint_dir=checkpoint_dir,
+                       checkpoint_period=checkpoint_period,
+                       results_path=results_path)
