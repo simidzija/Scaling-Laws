@@ -18,19 +18,17 @@ if __name__ == '__main__':
     with open(ROOT/'config.yaml', 'r') as file:
         config = yaml.safe_load(file)
     
-    # run
-    run = config[-1]
+    # fixed hyperparameters
+    vocab_size = config['fixed_hyperparams']['vocab_size']
+    batch_size = config['fixed_hyperparams']['batch_size']
+    seq_len = config['fixed_hyperparams']['seq_len']
 
-    # model hyperparams
-    vocab_size = run['vocab_size']
+    # run hyperparameters
+    run = config['runs'][-1]
     d_model = run['d_model']
     n_heads = run['n_heads']
     n_blocks = run['n_blocks']
-
-    # training hyperparams
     total_batches = run['total_batches']
-    batch_size = run['batch_size']
-    seq_len = run['seq_len']
     n_tokens = seq_len * batch_size * total_batches
 
     # create model

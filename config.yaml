@@ -35,3 +35,27 @@ runs:
   n_blocks: 2
   n_heads: 2
   total_batches: 32000
+- complete: true
+  d_model: 256
+  n_blocks: 4
+  n_heads: 4
+  total_batches: 8000
+- complete: true
+  d_model: 256
+  n_blocks: 4
+  n_heads: 4
+  total_batches: 16000
+- complete: true
+  d_model: 256
+  n_blocks: 4
+  n_heads: 4
+  total_batches: 32000
+- complete: true
+  d_model: 256
+  n_blocks: 4
+  n_heads: 4
+  total_batches: 64000
+- d_model: 256
+  n_blocks: 4
+  n_heads: 4
+  total_batches: 128000
