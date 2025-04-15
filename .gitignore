@@ -2,5 +2,8 @@
 .pytest_cache
 archive
 checkpoints/
+data/slim_pajama/
+!data/slim_pajama/data_10M.memmap
+!data/slim_pajama/tokenizer
 data/tiny_stories
 rough
