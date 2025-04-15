@@ -47,7 +47,7 @@ if __name__ == '__main__':
     data = np.memmap(filename=dir / filename,
                      dtype=np.dtype('int16'),
                      mode='w+',
-                     shape=(len(target_tokens),))
+                     shape=(target_tokens,))
 
     # tokenize
     token_count = 0
