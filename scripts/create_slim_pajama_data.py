@@ -15,8 +15,14 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.append(str(ROOT/'src'))
 
 if __name__ == '__main__':
+
+    # input
+    target_tokens = 50_000_000
+    write_period = 10_000_000  # tokens
+    filename = 'data_50M.memmap'
+
     # directory
-    dir = ROOT / 'data/pile/'
+    dir = ROOT / 'data/slim_pajama/'
     os.makedirs(dir, exist_ok=True)
 
     # dataset
@@ -29,12 +35,20 @@ if __name__ == '__main__':
     with open(dir/'tokenizer.json', 'w') as f:
         json.dump(sorted_vocab, f, indent=2)
 
+    # print settings
+    print_period = 5  # seconds
+    last_print_time = time()
+
+    # create memmap file
+    data = np.memmap(filename=dir / filename,
+                     dtype=np.dtype('int16'),
+                     mode='w+',
+                     shape=(len(target_tokens),))
+
     # tokenize
     token_count = 0
-    target_tokens = 10_000_000
     tokenized_data = []
-    print_time_interval = 5  # seconds
-    last_print_time = time()
+    last_write = 0
 
     for example in dataset:
         # get tokens
@@ -46,32 +60,25 @@ if __name__ == '__main__':
         # update token count
         token_count += len(tokens)
 
-        # print status
-        current_time = time()
-        if current_time > last_print_time + print_time_interval:
-            print(f'token_count = {token_count:,} / {target_tokens:,}')
-            last_print_time = current_time
-
         # break when target reached
-        if token_count > target_tokens:
+        if token_count >= target_tokens:
+            remaining_tokens = target_tokens - last_write
+            data[last_write:] = np.array(tokenized_data[remaining_tokens],
+                                         dtype='int16')
+            data.flush()
+            print(f'{token_count} tokens reached -> breaking.')
             break
 
-    # create memmap file
-    data = np.memmap(filename=dir/'data_10M.memmap',
-                     dtype=np.dtype('int16'),
-                     mode='w+',
-                     shape=(len(tokenized_data),))
+        # periodically write to file 
+        if token_count - last_write >= write_period:
+            print(f'writing {token_count - last_write:,} tokens to file.')
+            data[last_write:token_count] = np.array(tokenized_data, dtype='int16')
+            data.flush()
+            last_write = token_count
+            tokenized_data = []
 
-    # write to file
-    data[:] = np.array(tokenized_data, dtype=np.dtype('int16'))
-
-    # save
-    data.flush()
-
-
-    
-    
-
-
-
-
+        # print status
+        current_time = time()
+        if current_time > last_print_time + print_period:
+            print(f'token_count = {token_count:,} / {target_tokens:,}')
+            last_print_time = current_time
