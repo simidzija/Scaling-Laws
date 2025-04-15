@@ -1,4 +1,6 @@
-Experiments on T4 GPU:
+## Hyperparameters
+
+Experiments on Google Colab T4 GPU:
 
 | params | n_layers | d_model | batch_size | seq_len | can run? | iter/s |
 |--------|----------|---------|------------|---------|----------|--------|
@@ -44,3 +46,10 @@ to fit on the GPU and it has no affect on the runtime (still 1.0 s/batch).
 Going to batch_size = 8 and seq_len = 512 however is too much; the training run crashes due to insufficient memory,
 presumably because the minor increase in attention activation memory pushes us past the memory capacity of the GPU.
 
+
+### Learning rate
+
+In the Chinchilla scaling experiments they use a learning rate of 2e-4 for their smallest model (73M parameters) and 1.25e-4 for their largest model (6.8B parameters).
+My models will be on the smaller end of this range, so I will use the 2e-4 as a reference.
+However the batch size used to train the Chinchilla models is 0.5M tokens, whereas I will use a much smaller batch size of 4096 tokens, to save GPU memory (see discussion above).
+Therefore I will scale the learning rate by a factor of 4096/0.5M, giving a batch size of 1.6e-6.

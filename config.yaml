@@ -1,6 +1,6 @@
 fixed_hyperparams:
   batch_size: 16
-  lr: 0.0005
+  lr: 1.6e-6
   p_drop: 0.1
   seq_len: 256
   vocab_size: 32000
