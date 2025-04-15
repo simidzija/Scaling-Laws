@@ -82,8 +82,6 @@ if __name__ == '__main__':
                             device=device)
         
         # train
-        print(f'Training {model.n_params:,} parameter model.')
-
         train_from_scratch(model=model,
                            device=device,
                            data_path=data_path,
