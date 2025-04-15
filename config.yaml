@@ -1,19 +1,18 @@
-- # info
-  n_params: 4_491_776
-  n_tokens: 4_096_000
-  n_flops: 212_651_225_088_000
-  # model
+fixed_hyperparams:
   vocab_size: 32000
-  d_model: 128
-  n_heads: 2
-  n_blocks: 2
   p_drop: 0.1
-  # training
-  total_batches: 1000
   batch_size: 16
   seq_len: 256
   lr: 0.0005
 
-
+runs:
+  - d_model: 128
+    n_heads: 2
+    n_blocks: 2
+    total_batches: 1000
+  - d_model: 128
+    n_heads: 2
+    n_blocks: 2
+    total_batches: 2000
 
 

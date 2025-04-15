@@ -4,7 +4,6 @@ import sys
 from pathlib import Path
 
 # Third-party
-import matplotlib.pyplot as plt
 import numpy as np
 import yaml
 
@@ -14,7 +13,7 @@ sys.path.append(str(ROOT/'src'))
 
 # Local
 from model import Transformer
-from train import train_from_scratch, train_from_checkpoint
+from train import train_from_scratch
 from utils import set_seed
 
 
@@ -22,52 +21,86 @@ if __name__ == '__main__':
     # seed
     set_seed()
 
-    # config
-    with open(ROOT/'config.yaml', 'r') as file:
-        config = yaml.safe_load(file)
-    
-    # run
-    run_number = len(config) - 1
-    run = config[run_number]
-
     # device
-    device = 'mps'
-    
+    device = 'cuda'
+
     # data
-    data_path = str(ROOT/'data/slim_pajama/data_10M.memmap')
+    data_path = str(ROOT/'data/slim_pajama/data_10B.memmap')
     data_dtype = np.dtype('int16')
 
-    # checkpoint
-    checkpoint_dir = str(ROOT/f'checkpoints/slim_pajama_{run_number}')
-    checkpoint_period = run['total_batches'] // 10
-
-    # results
-    results_path = str(ROOT/f'results/slim_pajama/results_{run_number}.json')
-    if os.path.exists(results_path):
-        raise RuntimeError(f"results path {results_path} already exists. Please specify another path so that existing results aren't overwritten")
-
-    # progress
+    # print period (batches)
     print_period = 10
-    
-    # model
-    model = Transformer(vocab_size=run['vocab_size'],
-                        d_model=run['d_model'],
-                        max_seq_len=run['seq_len'],
-                        n_heads=run['n_heads'],
-                        n_blocks=run['n_blocks'],
-                        device='mps')
-    
-    # train
-    print(f'Training {model.n_params:,} parameter model.')
-    train_from_scratch(model=model,
-                       device=device,
-                       data_path=data_path,
-                       data_dtype=data_dtype,
-                       total_batches=run['total_batches'],
-                       batch_size=run['batch_size'],
-                       seq_len=run['seq_len'],
-                       lr=run['lr'],
-                       print_period=print_period,
-                       checkpoint_dir=checkpoint_dir,
-                       checkpoint_period=checkpoint_period,
-                       results_path=results_path)
+        
+    # config dict
+    with open(ROOT/'config.yaml', 'r') as file:
+        config = yaml.safe_load(file)
+
+    # fixed hyperparameters
+    vocab_size = config['fixed_hyperparams']['vocab_size']
+    p_drop = config['fixed_hyperparams']['p_drop']
+    batch_size = config['fixed_hyperparams']['batch_size']
+    seq_len = config['fixed_hyperparams']['seq_len']
+    lr = config['fixed_hyperparams']['lr']
+
+    # loop over incomplete runs
+    for run in config['runs']:
+        # skip if complete
+        if run.get('complete'):
+            continue
+
+        # run hyperparameters
+        d_model = run['d_model']
+        n_blocks = run['n_blocks']
+        total_batches = run['total_batches']
+        n_heads = run['n_heads']
+
+        # print model details
+        print('--------------------------------------------------------')
+        print(f'Training model:')
+        print(f'  d_model = {d_model}')
+        print(f'  n_blocks = {n_blocks}')
+        print(f'  total_batches = {total_batches}')
+        print(f'  n_heads = {n_heads}')
+        print()
+
+        # run name
+        name = f'{d_model}_{n_blocks}_{total_batches}'
+
+        # checkpoint
+        checkpoint_dir = str(ROOT/f'checkpoints/slim_pajama/{name}')
+        checkpoint_period = total_batches // 2
+
+        # results
+        results_path = str(ROOT/f'results/slim_pajama/{name}.json')
+
+        # model
+        model = Transformer(vocab_size=vocab_size,
+                            d_model=d_model,
+                            max_seq_len=seq_len,
+                            n_heads=n_heads,
+                            n_blocks=n_blocks,
+                            device=device)
+        
+        # train
+        print(f'Training {model.n_params:,} parameter model.')
+
+        train_from_scratch(model=model,
+                           device=device,
+                           data_path=data_path,
+                           data_dtype=data_dtype,
+                           total_batches=total_batches,
+                           batch_size=batch_size,
+                           seq_len=seq_len,
+                           lr=lr,
+                           print_period=print_period,
+                           checkpoint_dir=checkpoint_dir,
+                           checkpoint_period=checkpoint_period,
+                           results_path=results_path)
+
+        # mark run as complete
+        run['complete'] = True
+        with open(ROOT/'config.yaml', 'w') as file:
+            yaml.dump(config, file, default_flow_style=False)
+        
+        print('\nModel training complete')
+        print('--------------------------------------------------------')

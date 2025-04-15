@@ -17,9 +17,9 @@ sys.path.append(str(ROOT/'src'))
 if __name__ == '__main__':
 
     # input
-    target_tokens = 50_000_000
-    write_period = 10_000_000  # tokens
-    filename = 'data_50M.memmap'
+    target_tokens = 10_000_000_000
+    write_period = 100_000_000  # tokens
+    filename = 'data_10B.memmap'
 
     # directory
     dir = ROOT / 'data/slim_pajama/'
