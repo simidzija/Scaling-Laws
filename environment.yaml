@@ -13,3 +13,4 @@ dependencies:
   - pip:
       - datasets==3.2.0
       - matplotlib==3.10.0
+      - zstandard==0.23.0
