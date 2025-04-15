@@ -25,6 +25,10 @@ if __name__ == '__main__':
     dir = ROOT / 'data/slim_pajama/'
     os.makedirs(dir, exist_ok=True)
 
+    # raise error if file already exists to prevent overwrites
+    if os.path.exists(dir / filename):
+        raise RuntimeError(f'data path "{dir/filename}" already exists.')
+
     # dataset
     dataset = load_dataset("cerebras/SlimPajama-627B", split='train', streaming=True)
 
