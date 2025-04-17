@@ -70,7 +70,8 @@ runs:
   n_blocks: 7
   n_heads: 7
   total_batches: 32000
-- d_model: 448
+- complete: true
+  d_model: 448
   n_blocks: 7
   n_heads: 7
   total_batches: 64000
