@@ -1,85 +1,89 @@
 fixed_hyperparams:
-  batch_size: 16
+  batch_size: 128
   lr: 0.005
   p_drop: 0.1
   seq_len: 256
   vocab_size: 32000
 runs:
-- complete: true
-  d_model: 128
-  n_blocks: 2
-  n_heads: 2
-  total_batches: 1000
-- complete: true
-  d_model: 128
-  n_blocks: 2
-  n_heads: 2
-  total_batches: 2000
-- complete: true
-  d_model: 128
-  n_blocks: 2
-  n_heads: 2
-  total_batches: 4000
-- complete: true
-  d_model: 128
-  n_blocks: 2
-  n_heads: 2
-  total_batches: 8000
-- complete: true
-  d_model: 128
-  n_blocks: 2
-  n_heads: 2
-  total_batches: 16000
-- complete: true
-  d_model: 128
-  n_blocks: 2
-  n_heads: 2
-  total_batches: 32000
-- complete: true
-  d_model: 256
-  n_blocks: 4
+- d_model: 256
+  n_blocks: 8
   n_heads: 4
-  total_batches: 8000
-- complete: true
-  d_model: 256
-  n_blocks: 4
-  n_heads: 4
-  total_batches: 16000
-- complete: true
-  d_model: 256
-  n_blocks: 4
-  n_heads: 4
-  total_batches: 32000
-- complete: true
-  d_model: 256
-  n_blocks: 4
-  n_heads: 4
-  total_batches: 64000
-- complete: true
-  d_model: 256
-  n_blocks: 4
-  n_heads: 4
-  total_batches: 128000
-- complete: true
-  d_model: 448
-  n_blocks: 7
-  n_heads: 7
-  total_batches: 16000
-- complete: true
-  d_model: 448
-  n_blocks: 7
-  n_heads: 7
-  total_batches: 32000
-- complete: true
-  d_model: 448
-  n_blocks: 7
-  n_heads: 7
-  total_batches: 64000
-- d_model: 448
-  n_blocks: 7
-  n_heads: 7
-  total_batches: 128000
-- d_model: 448
-  n_blocks: 7
-  n_heads: 7
-  total_batches: 256000
+  total_batches: 100000
+# - complete: true
+#   d_model: 128
+#   n_blocks: 2
+#   n_heads: 2
+#   total_batches: 1000
+# - complete: true
+#   d_model: 128
+#   n_blocks: 2
+#   n_heads: 2
+#   total_batches: 2000
+# - complete: true
+#   d_model: 128
+#   n_blocks: 2
+#   n_heads: 2
+#   total_batches: 4000
+# - complete: true
+#   d_model: 128
+#   n_blocks: 2
+#   n_heads: 2
+#   total_batches: 8000
+# - complete: true
+#   d_model: 128
+#   n_blocks: 2
+#   n_heads: 2
+#   total_batches: 16000
+# - complete: true
+#   d_model: 128
+#   n_blocks: 2
+#   n_heads: 2
+#   total_batches: 32000
+# - complete: true
+#   d_model: 256
+#   n_blocks: 4
+#   n_heads: 4
+#   total_batches: 8000
+# - complete: true
+#   d_model: 256
+#   n_blocks: 4
+#   n_heads: 4
+#   total_batches: 16000
+# - complete: true
+#   d_model: 256
+#   n_blocks: 4
+#   n_heads: 4
+#   total_batches: 32000
+# - complete: true
+#   d_model: 256
+#   n_blocks: 4
+#   n_heads: 4
+#   total_batches: 64000
+# - complete: true
+#   d_model: 256
+#   n_blocks: 4
+#   n_heads: 4
+#   total_batches: 128000
+# - complete: true
+#   d_model: 448
+#   n_blocks: 7
+#   n_heads: 7
+#   total_batches: 16000
+# - complete: true
+#   d_model: 448
+#   n_blocks: 7
+#   n_heads: 7
+#   total_batches: 32000
+# - complete: true
+#   d_model: 448
+#   n_blocks: 7
+#   n_heads: 7
+#   total_batches: 64000
+# - d_model: 448
+#   n_blocks: 7
+#   n_heads: 7
+#   total_batches: 128000
+# - d_model: 448
+#   n_blocks: 7
+#   n_heads: 7
+#   total_batches: 256000

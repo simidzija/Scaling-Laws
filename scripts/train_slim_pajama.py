@@ -5,6 +5,7 @@ from pathlib import Path
 
 # Third-party
 import numpy as np
+import torch
 import yaml
 
 # Root dir
@@ -44,6 +45,9 @@ if __name__ == '__main__':
 
     # loop over incomplete runs
     for run in config['runs']:
+        # clear cuda memory
+        torch.cuda.empty_cache()
+
         # skip if complete
         if run.get('complete'):
             continue

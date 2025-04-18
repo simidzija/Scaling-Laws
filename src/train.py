@@ -218,15 +218,16 @@ def train(model: Transformer,
             print(f'batch {batch:3d}/{total_batches}: loss = {loss.item():10.5f}')
 
         # checkpoint
-        if checkpoint_period and (batch % checkpoint_period == 0 or 
-                                  batch == total_batches - 1):
-            save_checkpoint(checkpoint_dir=checkpoint_dir,
-                            batch=batch,
-                            model=model,
-                            optim=optim,
-                            lr_scheduler=lr_scheduler,
-                            scaler=scaler,
-                            losses=losses)
+        if checkpoint_period:
+            if batch > 0 and (batch % checkpoint_period == 0 or 
+                              batch == total_batches - 1):
+                save_checkpoint(checkpoint_dir=checkpoint_dir,
+                                batch=batch,
+                                model=model,
+                                optim=optim,
+                                lr_scheduler=lr_scheduler,
+                                scaler=scaler,
+                                losses=losses)
 
     # end timer
     train_time = time() - start_time

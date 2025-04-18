@@ -53,3 +53,18 @@ In the Chinchilla scaling experiments they use a learning rate of 2e-4 for their
 My models will be on the smaller end of this range, so I will use the 2e-4 as a reference.
 However the batch size used to train the Chinchilla models is 0.5M tokens, whereas I will use a much smaller batch size of 4096 tokens, to save GPU memory (see discussion above).
 Therefore I will scale the learning rate by a factor of 4096/0.5M, giving a batch size of 1.6e-6.
+
+This lr seems to give worse results than bigger lrs.
+I think the reason is that Chinchilla used Maximal Update Parameterization while I'm using Standard Parameterization, and therefore using their lr to inform my lr doesn't make sense.
+
+### Experiments with batch size
+
+| params | n_layers | d_model | bs  | seq_len | tokens | VRAM (max 15360 MiB) | iter/s |
+|--------|----------|---------|-----|---------|--------|----------------------|--------|
+| 14M    | 8        | 256     | 16  | 256     | 4096   | 2515 MiB             | 7.0    |
+| 14M    | 8        | 256     | 32  | 256     | 8192   | 5673 MiB             | 4.5    |
+| 14M    | 8        | 256     | 16  | 512     | 8192   | 5107 MiB             | 3.9    |
+| 14M    | 8        | 256     | 64  | 256     | 16384  | 9059 MiB             | 2.5    |
+| 14M    | 8        | 256     | 32  | 512     | 16384  | 9969 MiB             | 2.1    |
+| 14M    | 8        | 256     | 16  | 1024    | 16384  | 11571 MiB            | 1.6    |
+| 14M    | 8        | 256     | 128 | 256     | 32768  | Out of memory        | N/A    |
