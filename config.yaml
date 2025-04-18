@@ -1,6 +1,6 @@
 fixed_hyperparams:
   batch_size: 16
-  lr: 1.6e-06
+  lr: 5.0e-05
   p_drop: 0.1
   seq_len: 256
   vocab_size: 32000
@@ -55,33 +55,27 @@ runs:
   n_blocks: 4
   n_heads: 4
   total_batches: 64000
-- complete: true
-  d_model: 256
+- d_model: 256
   n_blocks: 4
   n_heads: 4
   total_batches: 128000
-- complete: true
-  d_model: 448
+- d_model: 448
   n_blocks: 7
   n_heads: 7
   total_batches: 16000
-- complete: true
-  d_model: 448
+- d_model: 448
   n_blocks: 7
   n_heads: 7
   total_batches: 32000
-- complete: true
-  d_model: 448
+- d_model: 448
   n_blocks: 7
   n_heads: 7
   total_batches: 64000
-- complete: true
-  d_model: 448
+- d_model: 448
   n_blocks: 7
   n_heads: 7
   total_batches: 128000
-- complete: true
-  d_model: 448
+- d_model: 448
   n_blocks: 7
   n_heads: 7
   total_batches: 256000
