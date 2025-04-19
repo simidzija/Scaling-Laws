@@ -80,3 +80,7 @@ def get_flops(vocab_size: int,
     n_seqs = batch_size * total_batches
 
     return n_seqs * (total_forward_per_seq + total_backward_per_seq)
+
+def moving_average(data, window_size, mode='valid'):
+    window = np.ones(window_size) / window_size
+    return np.convolve(data, window, mode=mode)
