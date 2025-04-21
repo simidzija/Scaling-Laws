@@ -8,7 +8,7 @@
         "p_drop": 0.0,
         "device": "mps"
     },
-    "lr": 0.0001,
+    "lr": 0.001,
     "total_batches": 1000,
     "batch_size": 32,
     "seq_len": 64,

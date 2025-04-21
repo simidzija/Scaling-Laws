@@ -12,7 +12,7 @@
         "p_drop": 0.0,
         "device": "cuda"
     },
-    "lr": 1.6e-07,
+    "lr": 1.6e-06,
     "total_batches": 32000,
     "batch_size": 16,
     "seq_len": 256,
