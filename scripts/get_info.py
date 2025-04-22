@@ -1,3 +1,10 @@
+"""
+Running this script will print out a high-level summary of the last training 
+run listed in the config.yaml configuration file, listing n_params, n_tokens, 
+and n_flops of the training run.
+"""
+
+
 # Standard library
 import sys
 from pathlib import Path

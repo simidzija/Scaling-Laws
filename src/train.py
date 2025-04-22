@@ -1,3 +1,14 @@
+"""
+Tools for model training.
+
+Contains:
+  - train: base training method
+  - train_from_scratch: method for training a new model. Calls train()
+  - train_from_checkpoint: method for training from checkpoint. Calls train()
+  - save_checkpoint: method for saving training checkpoint
+  - save_results: method for saving training results
+"""
+
 # Standard library
 import json
 import os
@@ -37,7 +48,7 @@ def train_from_scratch(model: Transformer,
                        checkpoint_dir: Optional[str]=None,
                        checkpoint_period: Optional[int]=None,
                        results_path: Optional[str]=None) -> None:
-    
+    """Train a new model."""
     # device and dtype
     device = torch.device(device)
     data_dtype = np.dtype(data_dtype)
@@ -74,6 +85,7 @@ def train_from_checkpoint(checkpoint_path: str,
                           checkpoint_dir: Optional[str]=None,
                           checkpoint_period: Optional[int]=None,
                           results_path: Optional[str]=None) -> None:
+    """Train model from a checkpoint."""
 
     # device and dtype
     device = torch.device(device)
@@ -141,6 +153,7 @@ def train(model: Transformer,
           checkpoint_dir: Optional[str]=None,
           checkpoint_period: Optional[int]=None,
           results_path: Optional[str]=None) -> None:
+    """Base method for model training."""
 
     # device and dtype
     device = torch.device(device)
@@ -253,6 +266,7 @@ def save_checkpoint(checkpoint_dir: str,
                     lr_scheduler: CosineAnnealingLR,
                     scaler: GradScaler,
                     losses: list[float]) -> None:
+    """Save checkpoint to cpu."""
 
     # create directory
     if checkpoint_dir:
@@ -282,6 +296,7 @@ def save_results(results_path: str,
                  seq_len: int,
                  losses: list[float],
                  train_time: float):
+    """Save model training results."""
 
     # main info
     n_params = model.n_params

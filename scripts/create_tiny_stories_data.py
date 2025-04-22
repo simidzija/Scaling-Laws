@@ -1,3 +1,10 @@
+"""
+Script for creating tokenized version of TinyStories dataset 
+(https://huggingface.co/datasets/roneneldan/TinyStories).
+This provides a clean and relatively simple natural language dataset, useful 
+for prototyping LLMs.
+"""
+
 # Standard library
 import sys
 from pathlib import Path

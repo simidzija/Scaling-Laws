@@ -1,3 +1,18 @@
+"""
+Transformer model.
+
+Contains:
+  - Transformer: class for decoder only transformer
+  - Block: class defining single transformer layer
+  - MultiheadAttention: class defining attention sublayer
+  - FeedForward: class defining feed forward sublayer
+  - DeEmbedding: class for de-embedding layer that is tied to embedding layer
+  - PositionalEncoding: class for sin/cos positional encodings
+
+Running this as a script will train a transformer to reverse integer sequences.
+This provides a quick check that the architecture (in particular the self attention) is working as it should.
+"""
+
 # Standard library
 from typing import Optional
 
@@ -9,6 +24,7 @@ from torch import Tensor
 
 
 class Transformer(nn.Module):
+    """Decoder only transformer model."""
     def __init__(self, 
                  vocab_size: int,
                  d_model: int,
@@ -88,6 +104,7 @@ class Transformer(nn.Module):
 ##################################  Layers  ###################################
 
 class Block(nn.Module):
+    """Single transformer layer."""
     def __init__(self, 
                  d_model: int, 
                  n_heads: int, 
@@ -124,6 +141,7 @@ class Block(nn.Module):
         return y
 
 class MultiheadAttention(nn.Module):
+    """Multi-head attention sublayer for transformer."""
     def __init__(self, 
                  d_model: int, 
                  n_heads: int, 
@@ -184,6 +202,7 @@ class MultiheadAttention(nn.Module):
 
 
 class FeedForward(nn.Module):
+    """Feed forward sublayer for transformer."""
     def __init__(self, 
                  d_model: int, 
                  device: torch.device | str) -> None:
@@ -205,6 +224,8 @@ class FeedForward(nn.Module):
 
 
 class DeEmbedding(nn.Module):
+    """De-embedding layer for transformer. 
+    Weights are tied to specified embedding layer."""
     def __init__(self, embed: nn.Embedding) -> None:
         super().__init__()
         self.embed = embed

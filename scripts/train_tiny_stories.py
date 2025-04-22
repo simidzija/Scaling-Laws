@@ -1,3 +1,7 @@
+"""
+Trains a transformer on the TinyStories dataset, as created by the script create_tiny_stories_data.py. The training loss curve is plotted.
+"""
+
 # Standard library
 import json
 import sys

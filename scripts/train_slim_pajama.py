@@ -1,5 +1,10 @@
+"""
+Trains a transformer on the SlimPajama dataset, created by the script 
+create_slim_pajama_data.py.
+The training can run on CPU, MPS, or cuda GPU.
+"""
+
 # Standard library
-import os
 import sys
 from pathlib import Path
 
@@ -23,10 +28,10 @@ if __name__ == '__main__':
     set_seed()
 
     # device
-    device = 'cuda'
+    device = 'mps'
 
     # data
-    data_path = str(ROOT/'data/slim_pajama/data_10B.memmap')
+    data_path = str(ROOT/'data/slim_pajama/data_528M.memmap')
     data_dtype = np.dtype('int16')
 
     # print period (batches)

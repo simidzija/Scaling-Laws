@@ -1,3 +1,8 @@
+"""
+Trains a transformer on generalized Fibonacci sequences, as created by the 
+script create_fibonacci_data.py. The training loss curve is plotted.
+"""
+
 # Standard library
 import json
 import sys

@@ -1,3 +1,8 @@
+"""
+Script for creating dataset of generalized Fibonacci sequences.
+This provides a useful toy dataset for testing sequence models.
+"""
+
 # Standard library
 import json
 import sys

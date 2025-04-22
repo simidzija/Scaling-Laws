@@ -1,3 +1,13 @@
+"""
+Script for creating tokenized version of SlimPajama dataset.
+
+SlimPajama (https://huggingface.co/datasets/cerebras/SlimPajama-627B) is a
+natural language datast that is obtained by cleaning the larger RedPajama 
+dataset. This script tokenizes a subset of this dataset into a desired number 
+of tokens using the LLaMa-30b tokenizer (vocab size = 32k). We use this 
+tokenized data for our scaling laws experiments.
+"""
+
 # Standard library
 import json
 import os
@@ -17,9 +27,9 @@ sys.path.append(str(ROOT/'src'))
 if __name__ == '__main__':
 
     # input
-    target_tokens = 10_000_000_000
+    target_tokens = 528_000_000
     write_period = 100_000_000  # tokens
-    filename = 'data_10B.memmap'
+    filename = 'data_528M.memmap'
 
     # directory
     dir = ROOT / 'data/slim_pajama/'

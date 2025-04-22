@@ -1,5 +1,16 @@
+"""
+Tools for managing training data.
+
+Contains:
+  - MemmapDataset: class for datasets stored in .memmap format
+  - load_memmap: load .memmap file into memmap array
+  - create_tokenizer: train a tokenizer using BPE
+  - tokenize: tokenize data
+"""
+
+
+
 # Standard library
-import json
 from pathlib import Path
 from typing import Iterable, Iterator, Optional
 
@@ -18,6 +29,7 @@ ROOT = Path(__file__).resolve().parent.parent
 ################################  Dataset class  ###############################
 
 class MemmapDataset(Dataset):
+    """Class for datasets stored in .memmap format"""
     def __init__(self, 
                  data_path: str,
                  start_seq: Optional[int],
@@ -54,7 +66,7 @@ class MemmapDataset(Dataset):
 ##################################  Load data  #################################
 
 def load_memmap(path: str, dtype: np.dtype | str) -> np.memmap:
-
+    """Load .memmap file into array."""
     return np.memmap(path, mode='r', dtype=np.dtype(dtype))
 
 ##############################  Data processing  ###############################
@@ -62,6 +74,7 @@ def load_memmap(path: str, dtype: np.dtype | str) -> np.memmap:
 def create_tokenizer(iterable: Iterable[str], 
                      savepath: str, 
                      vocab_size: int) -> None:
+    """Train a tokenizer using BPE on text in iterable."""
     # Initialize tokenizer
     tokenizer = Tokenizer(BPE(unk_token="[UNK]"))
     tokenizer.pre_tokenizer = Whitespace()
@@ -82,6 +95,7 @@ def tokenize(iterable: Iterable[str],
              tokenizer_path: str, 
              filetype: str, 
              dtype: np.dtype | str) -> None:
+    """Tokenize text in iterable and save as single file."""
 
     # dtype
     dtype = np.dtype(dtype)
