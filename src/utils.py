@@ -84,3 +84,9 @@ def get_flops(vocab_size: int,
 def moving_average(data, window_size, mode='valid'):
     window = np.ones(window_size) / window_size
     return np.convolve(data, window, mode=mode)
+    
+def gaussian_smoothing(data, sigma, window_size=None, mode='valid'):
+    window_size = 3 * sigma if window_size is None else window_size
+    window = np.exp(- 0.5*(np.arange(-window_size, window_size) / sigma)**2)
+    window = window / np.sum(window)
+    return np.convolve(data, window, mode=mode)
