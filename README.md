@@ -1,3 +1,55 @@
+# Scaling Laws
+
+In this repo we train transformer based language models at scale using hardware accelerators, and use the results to analyze LLM scaling laws.
+
+## Model
+
+Our model architecture is defined in [model.py](src/model.py).
+We use a standard decoder-only transformer.
+We tie the de-embedding weights to the embedding weights in order to reduce the total parameter count of the model.
+
+## Hardware accelerators
+
+It is not feasible to train language models at scale on a CPU.
+Therefore we write our code to take advantage of available hardware accelerators.
+We make use of two types of accelerators:
+1. Metal Performance Shaders (MPS): available on newer Mac computers
+2. GPU: we use a T4 GPU via a Google Cloud free trial
+
+In practice there are various new challenges that arise when training on an accelerator, in particular on a GPU.
+We will discuss some of these nuances below.
+
+## Training
+
+We train our models using the AdamW optimizer (see [train.py](src/train.py)).
+AdamW is just Adam followed by weight decay of all the weights by the same factor, and it is a common choice when training LLMs.
+The [Chinchilla scaling laws paper](https://arxiv.org/abs/2203.15556), which we take much of our inspiration from, uses AdamW.
+
+To improve performance when training on a GPU, we do the following:
+- In DataLoader use `num_workers=2` and `pin_memory=True` to speed up data loading
+- Use Automatic Mixed Precision (AMP): this automatically performs tensor arithmetic in 16-bit precision rather than 32-bit precision whenever possible
+- Use GradScaler to prevent underflow of gradients during backprop that might arise due to using AMP
+
+We save model checkpoints throughout training and implement the ability to restart training from a checkpoint.
+
+
+## Datasets
+
+## Preliminary experiments
+
+## Hyperparameters
+
+## Main experiments
+
+## Results: scaling laws
+
+## Results: benchmarking hardware accelerators
+
+## Things to improve
+- gradient checkpointing to save memory
+- maximal update parameterization to ensure optimal hyperparameters
+
+
 ## Hyperparameters
 
 Experiments on Google Colab T4 GPU:
