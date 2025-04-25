@@ -1,49 +1,133 @@
 # Scaling Laws
 
-In this repo we train transformer based language models at scale using hardware accelerators, and use the results to analyze LLM scaling laws.
+In this repo I train transformer based language models at scale using hardware accelerators, and use the results to analyze LLM scaling laws.
 
 ## Model
 
-Our model architecture is defined in [model.py](src/model.py).
-We use a standard decoder-only transformer.
-We tie the de-embedding weights to the embedding weights in order to reduce the total parameter count of the model.
+My model architecture is defined in [model.py](src/model.py).
+I use a standard decoder-only transformer and the de-embedding weights to the embedding weights in order to reduce the total parameter count of the model.
 
 ## Hardware accelerators
 
 It is not feasible to train language models at scale on a CPU.
-Therefore we write our code to take advantage of available hardware accelerators.
-We make use of two types of accelerators:
+Therefore I write my code to take advantage of available hardware accelerators.
+I make use of two types of accelerators:
 1. Metal Performance Shaders (MPS): available on newer Mac computers
 2. GPU: we use a T4 GPU via a Google Cloud free trial
 
 In practice there are various new challenges that arise when training on an accelerator, in particular on a GPU.
-We will discuss some of these nuances below.
+I will discuss some of these nuances below.
 
 ## Training
 
-We train our models using the AdamW optimizer (see [train.py](src/train.py)).
+I train the models using the AdamW optimizer (see [train.py](src/train.py)).
 AdamW is just Adam followed by weight decay of all the weights by the same factor, and it is a common choice when training LLMs.
-The [Chinchilla scaling laws paper](https://arxiv.org/abs/2203.15556), which we take much of our inspiration from, uses AdamW.
+The [Chinchilla scaling laws paper](https://arxiv.org/abs/2203.15556), which I take inspiration from, uses AdamW.
 
-To improve performance when training on a GPU, we do the following:
+To improve performance when training on a GPU, I do the following:
 - In DataLoader use `num_workers=2` and `pin_memory=True` to speed up data loading
 - Use Automatic Mixed Precision (AMP): this automatically performs tensor arithmetic in 16-bit precision rather than 32-bit precision whenever possible
 - Use GradScaler to prevent underflow of gradients during backprop that might arise due to using AMP
 
-We save model checkpoints throughout training and implement the ability to restart training from a checkpoint.
+I save model checkpoints throughout training and implement the ability to restart training from a checkpoint.
 
 
 ## Datasets
 
+I work with three datasets:
+
+### Fibonacci
+This is a dataset of generalized Fibonacci sequences.
+Each integer sequence is defined by two parameters, `n_seeds` and `max_int`.
+The first `n_seeds` integers in the sequence are uniformly sampled from [0,1,...,`max_int`], and subsequent integers are defined by the sum of the previous `n_seeds` integers, modulo `max_int`.
+Success on this dataset requires a transformer to be able to focus its attention on the previous `n_seeds` tokens, so it is useful for testing whether the attention mechanism works.
+
+Purpose:
+- Preliminary testing of transformer architecture
+
+Files:
+- Create dataset: [`scripts/create_fibonacci_data.py`](scripts/create_fibonacci_data.py)
+- Dataset: [`data/fibonacci`](data/fibonacci/).
+
+### Tiny Stories
+Dataset of synthetically generated short stories; see [paper](https://arxiv.org/abs/2305.07759) and [huggingface repo](https://huggingface.co/datasets/roneneldan/TinyStories).
+Has a small vocab size (10k) and is very clean relative to real-world datasets.
+
+Purpose:
+- Prototyping: model checkpointing, training on accelerators, etc. 
+
+Files:
+- Create dataset: [`scripts/create_tiny_stories_data.py`](scripts/create_fibonacci_data.py)
+- Dataset:[`data/tiny_stories`](data/tiny_stories/).
+
+### Slim Pajama
+895GB natural language dataset from Cerebras; see [blog](https://www.cerebras.net/blog/slimpajama-a-627b-token-cleaned-and-deduplicated-version-of-redpajama)
+and [huggingface repo](https://huggingface.co/datasets/cerebras/SlimPajama-627B).
+The dataset is not tokenized - I tokenize it using the [LLaMA-30B](https://huggingface.co/huggyllama/llama-30b)'s tokenizer.
+
+Purpose:
+- Scaling law experiments
+
+Files:
+- Create dataset: [`scripts/create_slim_pajama_data.py`](scripts/create_slim_pajama_data.py)
+- Dataset:[`data/slim_pajama`](data/slim_pajama).
+
+
 ## Preliminary experiments
 
-## Hyperparameters
+### Fibonacci
+I train a 150k parameter model on Fibonacci sequences of length 32, with 2 and 3 seeds, with addition modulo 10.
+Training results for the 2 seed case are shown:
+![2 Digit Fibonacci training loss](plots/2_digit_fibonacci.png)
+Each batch is a single sequence.
+With 1000 batches the model is able to reduce its loss nearly to the irreducable loss threshold (the unavoidable loss due to the random seeds).
+However improvements beyond random guessing begin after ~100 batches, which corresponds exactly to the number of different sequences with 2 seeds and 10 digits.
+Therefore the low training loss is likely due to the models memorizing the sequences and not due to generalization ability.
+We could easily verify this using a held out test set, but let's instead move on to training on natural language.
+
+Files:
+- Training script: [`scripts/train_fibonacci.py`](scripts/train_fibonacci.py)
+- Results: [plots/2_digit_fibonacci.png](plots/2_digit_fibonacci.png) and [plots/3_digit_fibonacci.png](plots/3_digit_fibonacci.png)
+
+### Tiny Stories
+Next I train a 789k parameter model on 2M tokens from the Tiny Stories dataset.
+The training curve is as follows:
+![Tiny Stories training loss](plots/tiny_stories.png)
+Since the full dataset contains more than 2M tokens, we never repeat training data, and therefore the training loss is indicative of generalization.
+
+Files:
+- Training script: [`scripts/train_tiny_stories.py`](scripts/train_tiny_stories.py)
+- Results: [`results/tiny_stories`](results/tiny_stories/)
+
 
 ## Main experiments
 
-## Results: scaling laws
+My main experiments consisted of training models of various sizes on varying number of tokens from the Slim Pajama dataset.
+The goal was to obtain scaling law plots like those in the [Chinchilla paper](https://arxiv.org/abs/2203.15556).
 
-## Results: benchmarking hardware accelerators
+Files:
+- Training script: [`scripts/train_slim_pajama.py`](scripts/train_slim_pajama.py)
+- Results: [`results/slim_pajama`](results/slim_pajama/)
+
+### Hyperparameters
+
+There are ~10 hyperparameters that define a vanilla transformer's architecture and training setup.
+Therefore even a very crude study of the full hyperparameter space would require many thousands of training runs.
+Instead, basic scaling law experiments typically focus on the effects of only two hyperparameters: the total number of parameters of the model and the total number of training tokens. 
+The remaining hyperparameters must be set in some principled way, so that the scaling law experiments are meaningful.
+Here I discuss how I chose all the hyperparameters for my experiments.
+
+#### Architecture hyperparameters
+
+
+#### Training hyperparameters
+
+
+### Results: scaling laws
+
+### Results: benchmarking hardware accelerators
+
+
 
 ## Things to improve
 - gradient checkpointing to save memory
