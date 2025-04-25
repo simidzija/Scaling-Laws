@@ -1,9 +1,9 @@
 fixed_hyperparams:
   batch_size: 16
   lr: 1.6e-06
-  p_drop: 0.1
+  p_drop: 0.0
   seq_len: 256
-  vocab_size: 32000
+  vocab_size: 10000
 runs:
 - complete: true
   d_model: 128
@@ -36,6 +36,11 @@ runs:
   n_heads: 2
   total_batches: 32000
 - complete: true
+  d_model: 128
+  n_blocks: 2
+  n_heads: 2
+  total_batches: 128000
+- complete: true
   d_model: 256
   n_blocks: 4
   n_heads: 4
@@ -105,7 +110,3 @@ runs:
   n_blocks: 10
   n_heads: 10
   total_batches: 256000
-- d_model: 640
-  n_blocks: 10
-  n_heads: 10
-  total_batches: 512000

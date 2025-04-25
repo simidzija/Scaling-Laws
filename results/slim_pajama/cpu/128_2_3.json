@@ -1,0 +1,24 @@
+{
+    "n_params": 4491776,
+    "n_tokens": 12288,
+    "n_flops": 637953675264,
+    "train_time": 40.35424304008484,
+    "model_hyperparameters": {
+        "vocab_size": 32000,
+        "d_model": 128,
+        "max_seq_len": 256,
+        "n_heads": 2,
+        "n_blocks": 2,
+        "p_drop": 0.0,
+        "device": "cpu"
+    },
+    "lr": 1.6e-06,
+    "total_batches": 3,
+    "batch_size": 16,
+    "seq_len": 256,
+    "losses": [
+        99.6989974975586,
+        98.8160629272461,
+        99.36799621582031
+    ]
+}
