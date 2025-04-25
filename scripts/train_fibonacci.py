@@ -36,6 +36,9 @@ if __name__ == '__main__':
         irreducible_loss = (n_seeds / (seq_len - 1)) * np.log(max_int - 2)
         print(f'irreducible_loss = {irreducible_loss}')
 
+        # random guessing
+        random_guessing = np.log(max_int)
+
     # model
     model = Transformer(vocab_size=vocab_size,
                         d_model=64,
@@ -53,41 +56,43 @@ if __name__ == '__main__':
     checkpoint_dir = str(ROOT/'checkpoints/fibonacci')
     checkpoint_period = 100
 
-    # # train from scratch
-    # start_batch = 0
-    # losses = train_from_scratch(model=model,
-    #                             device=device,
-    #                             data_path=data_path,
-    #                             data_dtype=data_dtype,
-    #                             total_batches=total_batches,
-    #                             batch_size=batch_size,
-    #                             seq_len=seq_len,
-    #                             lr=lr,
-    #                             print_period=print_period,
-    #                             checkpoint_dir=checkpoint_dir,
-    #                             checkpoint_period=checkpoint_period)
+    # train from scratch
+    start_batch = 0
+    losses = train_from_scratch(model=model,
+                                device=device,
+                                data_path=data_path,
+                                data_dtype=data_dtype,
+                                total_batches=total_batches,
+                                batch_size=batch_size,
+                                seq_len=seq_len,
+                                lr=lr,
+                                print_period=print_period,
+                                checkpoint_dir=checkpoint_dir,
+                                checkpoint_period=checkpoint_period)
 
-    # train from checkpoint
-    start_batch = 200
-    checkpoint_path = checkpoint_dir + f'/checkpoint_batch_{start_batch}.pt'
+    # # train from checkpoint
+    # start_batch = 200
+    # checkpoint_path = checkpoint_dir + f'/checkpoint_batch_{start_batch}.pt'
 
-    losses = train_from_checkpoint(checkpoint_path=checkpoint_path,
-                                   device=device,
-                                   data_path=data_path,
-                                   data_dtype=data_dtype,
-                                   total_batches=total_batches,
-                                   batch_size=batch_size,
-                                   seq_len=seq_len,
-                                   print_period=print_period,
-                                   checkpoint_dir=checkpoint_dir,
-                                   checkpoint_period=checkpoint_period)
+    # losses = train_from_checkpoint(checkpoint_path=checkpoint_path,
+    #                                device=device,
+    #                                data_path=data_path,
+    #                                data_dtype=data_dtype,
+    #                                total_batches=total_batches,
+    #                                batch_size=batch_size,
+    #                                seq_len=seq_len,
+    #                                print_period=print_period,
+    #                                checkpoint_dir=checkpoint_dir,
+    #                                checkpoint_period=checkpoint_period)
 
     # plot
     batches = range(start_batch, total_batches)
+    cmap = plt.cm.tab10
     plt.plot(batches, losses, label='train loss')
-    plt.axhline(irreducible_loss, color='k', ls='--', label='irreducible loss')
+    plt.axhline(random_guessing, color='k', ls='--', label='random guessing')
+    plt.axhline(irreducible_loss, color='r', ls='--', label='irreducible loss')
     n_diff_seqs = vocab_size ** n_seeds
-    plt.axvline(n_diff_seqs, color='r', ls='--', label='seqs start repeating')
+    plt.axvline(n_diff_seqs, color='g', ls='--', label='~ 1 epoch')
     plt.xlabel('batch')
     plt.xlim(start_batch, total_batches)
     plt.yscale('log')
