@@ -1,6 +1,8 @@
 # Scaling Laws
 
-In this repo I train transformer based language models at scale using hardware accelerators, and use the results to analyze LLM scaling laws.
+In this repo I train transformer based language models at scale and use the results to analyze LLM scaling laws.
+For my experiments I use the $300 of free trial Google Cloud credits to run my experiments on a T4 GPU.
+I learned many practical lessons related to training LLMs at scale on a fixed budget.
 
 ## Model
 
@@ -114,13 +116,44 @@ Files:
 There are ~10 hyperparameters that define a vanilla transformer's architecture and training setup.
 Therefore even a very crude study of the full hyperparameter space would require many thousands of training runs.
 Instead, basic scaling law experiments typically focus on the effects of only two hyperparameters: the total number of parameters of the model and the total number of training tokens. 
-The remaining hyperparameters must be set in some principled way, so that the scaling law experiments are meaningful.
+The remaining hyperparameters must be set in some principled way.
 Here I discuss how I chose all the hyperparameters for my experiments.
 
 #### Architecture hyperparameters
 
+##### `d_model`
+
+`d_model` is effectively the single free "architecture" parameter that ultimately determines all of the other architecture parameters, including `n_params`.
+Preliminary experiments showed that `d_model` as high as 1280 could fit on the T4, and that this model could be optimally trained (according to the Chinchilla scaling laws) within my $300 Google Cloud budget, all the while leaving enough compute for training smaller models for the purposes of analyzing scaling trends.
+However the learning / debugging / prototyping phase ended up using more compute than anticipated, and in the end I only had enough compute to train up to a `d_model = 640`.
+I ended up varying `d_model` over the values 128, 256, 448, 640.
+
+##### `vocab_size`
+
+I use a vocab size of 30k, which is on the lower end of the standard range for LLMs (e.g. GPT-3 had a vocab size of ~50k).
+I stick to the lower end of the range because my models are fairly small LLMs, and I wanted to reduce the relative fraction of embedding parameters.
+This is why I ended up using the LLaMA-30B tokenizer: it had the desired vocab size.
+
+##### `n_heads`
+
+I pick `n_heads` so that `d_model / n_heads = 64`, which is a fairly standard choice.
+
+##### `n_layers`
+
+For simplicity I pick `n_layers = `n_heads`, which is roughly the trend observed in the smaller models from the Chinchilla paper (see table A4 in the paper).
+
 
 #### Training hyperparameters
+
+- n_tokens:
+- seq_len
+- batch_size
+- total_batches
+
+- lr
+- p_drop
+
+
 
 
 ### Results: scaling laws
