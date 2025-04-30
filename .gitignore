@@ -1,7 +1,7 @@
 *__pycache__*
 .pytest_cache
 archive
-checkpoints/
+checkpoints/*
 data/slim_pajama/
 !data/slim_pajama/data_10M.memmap
 !data/slim_pajama/tokenizer
