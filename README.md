@@ -111,7 +111,9 @@ Files:
 - Training script: [`scripts/train_slim_pajama.py`](scripts/train_slim_pajama.py)
 - Results: [`results/slim_pajama`](results/slim_pajama/)
 
-### Hyperparameters
+Results are discussed below, after discussing hyperparameters.
+
+## Hyperparameters
 
 There are ~10 hyperparameters that define a vanilla transformer's architecture and training setup.
 Therefore even a very crude study of the full hyperparameter space would require many thousands of training runs.
@@ -119,55 +121,56 @@ Instead, basic scaling law experiments typically focus on the effects of only tw
 The remaining hyperparameters must be set in some principled way.
 Here I discuss how I chose all the hyperparameters for my experiments.
 
-#### Architecture hyperparameters
+### Architecture hyperparameters
 
-##### `d_model`
+#### `d_model`
 
 `d_model` is effectively the single free "architecture" parameter that ultimately determines all of the other architecture parameters, including `n_params`.
 Preliminary experiments showed that `d_model` as high as 1280 could fit on the T4, and that this model could be optimally trained (according to the Chinchilla scaling laws) within my $300 Google Cloud budget, all the while leaving enough compute for training smaller models for the purposes of analyzing scaling trends.
 However the learning / debugging / prototyping phase ended up using more compute than anticipated, and in the end I only had enough compute to train up to a `d_model = 640`.
 I ended up varying `d_model` over the values 128, 256, 448, 640.
 
-##### `vocab_size`
+#### `vocab_size`
 
 I use a vocab size of 30k, which is on the lower end of the standard range for LLMs (e.g. GPT-3 had a vocab size of ~50k).
 I stick to the lower end of the range because my models are fairly small LLMs, and I wanted to reduce the relative fraction of embedding parameters.
 This is why I ended up using the LLaMA-30B tokenizer: it had the desired vocab size.
 
-##### `n_heads`
+#### `n_heads`
 
 I pick `n_heads` so that `d_model / n_heads = 64`, which is a fairly standard choice.
 
-##### `n_layers`
+#### `n_layers`
 
 For simplicity I pick `n_layers = `n_heads`, which is roughly the trend observed in the smaller models from the Chinchilla paper (see table A4 in the paper).
 
-##### `n_params`
+#### `n_params`
 
 Fixing `d_model`, `vocab_size`, `n_heads` and `n_layers` determines `n_params`.
 I train models with 4.5M, 11.3M, 31.6M, and 69.7M parameters.
 
 
-#### Training hyperparameters
+### Training hyperparameters
 
-##### `n_tokens`
+#### `n_tokens`
 
 The Chinchilla paper showed that the optimal ratio of tokens to parameters when training transformer LLMs is ~20.
 To verify this I train each model on 4 or 5 token to parameter ratios ranging from ~2 to ~30.
 The exception is my largest model, which due to insufficient compute I only trained to a ratio `n_tokens / n_params ~ 15`.
 
-##### `seq_len` and `batch_size`
+#### `seq_len` and `batch_size`
 
 The number of tokens in a batch is `seq_len * batch_size`, where `batch_size` is the number of sequences in a batch.
 The most *token* efficient way to train LLMs is one token per batch (with a suitably small learning rate), but this is obviously extremely *time* inefficient.
 Instead, batch sizes of millions of tokens (with larger learning rates) are typically used to train frontier LLMs.
 This improves the time efficiency by millions of times, while minimally sacrificing token efficiency (see [here](https://arxiv.org/abs/1812.06162)).
+
 In my case however I was limited by GPU memory. 
 Preliminary experiments showed that for the biggest model I intended to train (485M parameters), the maximum tokens per batch that the GPU could support was ~4096, split up as `seq_len = 256` and `batch_size = 16`.
 Because attention activations (one of the contributors to GPU memory usage) scale as `batch_size * seq_len ** 2` and other activations only scale as `batch_size * seq_len`, the tokens per batch can be slightly increased by decreasing `seq_len` and increasing `batch_size`, but I chose to keep `seq_len` at 256 so that my trained models can have a context window that can fit a paragraph.
 For simplicity I kept `seq_len = 256` and `batch_size = 16` even for the smaller models.
 
-##### `total_batches`
+#### `total_batches`
 
 The total number of batches fixed as `total_batches = n_tokens / (seq_len * batch_size)`.
 The biggest model I intended to train had 485M parameters, and Chinchilla scaling suggests that optimal training of this model requires ~10B tokens.
@@ -175,7 +178,7 @@ With 4096 tokens per batch this is ~2.5M batches.
 Preliminary experiments showed that on the T4 GPU each batch takes ~1s so this would take about a month of runtime, which is reasonable: 
 the T4 costs ~$7/day and I had $300 in cloud credits, which amounts to ~40 days of T4 compute.
 
-##### `lr`
+#### `lr`
 
 Decreasing the learning rate during training is known to be effective when training LLMs.
 A typical decrease factor is 10, which is what I use.
@@ -187,15 +190,15 @@ However the batch size used by them is 0.5M tokens, whereas my batch size is onl
 As explained [here](https://arxiv.org/abs/1812.06162) decreasing the batch size should be accompanied by a linear decrease in the learning rate.
 Therefore I scale the Chinchilla lr by a factor of 4096/0.5M, resulting in an initial lr of $1.6\times 10^{-6}$.
 
-##### `p_drop`
+#### `p_drop`
 
 I intended to set the dropout rate to `0.1`, which is typical, but I forgot, so it defaulted to 0 (no dropout).
 It's unlikely that this had much effect on my results.
 
 
-### Results: scaling laws
+## Results: scaling laws
 
-### Results: benchmarking hardware accelerators
+## Results: benchmarking hardware accelerators
 
 
 
