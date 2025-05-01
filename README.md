@@ -80,7 +80,7 @@ Files:
 ### Fibonacci
 I train a 150k parameter model on Fibonacci sequences of length 32, with 2 and 3 seeds, with addition modulo 10.
 Training results for the 2 seed case are shown:
-![2 Digit Fibonacci training loss](plots/2_digit_fibonacci.png)
+![2 Digit Fibonacci training loss](plots/fibonacci/2_digit_fibonacci.png)
 Each batch is a single sequence.
 With 1000 batches the model is able to reduce its loss nearly to the irreducable loss threshold (the unavoidable loss due to the random seeds).
 However improvements beyond random guessing begin after ~100 batches, which corresponds exactly to the number of different sequences with 2 seeds and 10 digits.
@@ -89,17 +89,17 @@ We could easily verify this using a held out test set, but let's instead move on
 
 Files:
 - Training script: [`scripts/train_fibonacci.py`](scripts/train_fibonacci.py)
-- Results: [plots/2_digit_fibonacci.png](plots/2_digit_fibonacci.png) and [plots/3_digit_fibonacci.png](plots/3_digit_fibonacci.png)
+- Results: [`plots/fibonacci/`](plots/fibonacci/)
 
 ### Tiny Stories
 Next I train a 789k parameter model on 2M tokens from the Tiny Stories dataset.
 The training curve is as follows:
-![Tiny Stories training loss](plots/tiny_stories.png)
+![Tiny Stories training loss](plots/tiny_stories/tiny_stories.png)
 Since the full dataset contains more than 2M tokens, we never repeat training data, and therefore the training loss is indicative of generalization.
 
 Files:
 - Training script: [`scripts/train_tiny_stories.py`](scripts/train_tiny_stories.py)
-- Results: [`results/tiny_stories`](results/tiny_stories/)
+- Results: [`results/tiny_stories`](results/tiny_stories/) and [`plots/tiny_stories/`](plots/tiny_stories/)
 
 
 ## Main experiments
@@ -109,7 +109,7 @@ The goal was to obtain scaling law plots like those in the [Chinchilla paper](ht
 
 Files:
 - Training script: [`scripts/train_slim_pajama.py`](scripts/train_slim_pajama.py)
-- Results: [`results/slim_pajama`](results/slim_pajama/)
+- Results: [`results/slim_pajama`](results/slim_pajama/) and [`plots/slim_pajama/`](plots/tiny_stories/)
 
 Results are discussed below, after discussing hyperparameters.
 
@@ -198,7 +198,69 @@ It's unlikely that this had much effect on my results.
 
 ## Results: scaling laws
 
+### Loss vs flops
+
+I perform 20 training runs on 4 model sizes, ranging from 4.5M to 69.7M parameters, and trained on varying number of tokens, ranging from 4M tokens for the smallest training run on the smallest model, to 1.0B tokens for the largest training run on the largest model.
+I plot the 20 training loss curves (Gaussian smoothed) as a function of flops performed until that point in the training run:
+![Loss vs flops](plots/slim_pajama/loss_vs_flops.png)
+
+The key observation from this plot is that the pareto frontier of the loss curves, highlighted in gray, roughly follows a straight line on the log-log plot.
+The line of best fit is
+$$
+\log{(\text{loss})} = -0.265 \log{(\text{flops})} + 18.44
+$$
+and is shown in red.
+From this we can extrapolate the pareto training loss to higher flop values. 
+For example:
+| flops | extrapolated pareto loss | 
+|-------|--------------------------|
+| 1e19  | 3.30                     |
+| 1e20  | 1.79                     |
+| 1e21  | 0.97                     |
+| 1e22  | 0.53                     |
+
+Comparing to the Chinchilla paper (Fig 2) shows that the extrapolated pareto loss at $10^19$ flops is roughly what is achieved in practice, but the higher flop values lead to increasingly lower predicted losses compared to what is actually achieved.
+This is in part due to the well-known deviation from a perfectly linear relationship between log-loss and log-flops which must exist due to a non-zero irreducible loss / Bayes error / entropy of natural language that no model can ever improve upon.
+
+### Optimal scaling of model size and training data
+
+The main practical benefit of LLM scaling laws is that they allow one to predict the optimal balance between model size and data size for a given compute budget.
+The Chinchilla paper showed that this optimal balance is achieved when `n_tokens / n_params ~ 20`.
+The main goal of this project was to confirm this result, or at least obtain a different optimal ratio.
+Unfortunately I wasn't able to do either of these things.
+
+To understand why not, notice from the above plot of loss versus flops that at any given flop value *the smallest trained model has the lowest loss*.
+In other words there is *no crossover* between training curves corresponding to different sized models.
+To see this more clearly here is a plot of only two training runs:
+
+![Loss vs flops without crossover](plots/slim_pajama/loss_vs_flops_no_crossover.png)
+
+The blue curve corresponds to a 4.5M parameter model and the orange curve to a 11.3M parameter model. 
+The dashed lines indicate the number of flops that Chinchilla predicts are optimal in training models of these sizes.
+Indeed there is no crossover between the two loss curves.
+
+This is in contrast to the Chinchilla analysis, which implies that such a crossover should occur between the two dashed lines. 
+What's worse the loss curves don't even seem like they're approaching one another, and so it doesn't seem like a crossover would occur if they were extended by further training.
+This is counter to common sense: training optimally with a large number of tokens should require a large model.
+
+Something is therefore clearly wrong with my methodology. 
+In hindsight, my guess is that the issue is with my model parameter initializations. 
+I used a standard initialization approach in which weight matrices of shape $n_\text{in}$ by $n_\text{out}$ neurons are initialized to be of a scale $1 / \sqrt{n_\text{in}}$.
+However carefully looking at the Chinchilla paper indicates that they use different parameter initialization approach called "Maximal Update Parameterization" (MUP). 
+
+MUP is very useful because it allows one to optimize hyperparameters for a small model and directly transfer them to a larger model while remaining confidant that they will remain optimal at the larger scale.
+The key however is that in order for the hyperparameters to remain optimal at the larger scale, regular trainable parameters must be initialized in a non-trivial way that depends on the ratio of the large scale to the small scale.
+This is different from the standard parameter initialization that I use, and is likely the reason that I'm unable to reproduce the Chinchilla results.
+
+
+
 ## Results: benchmarking hardware accelerators
+
+![T4 performance](plots/slim_pajama/t4_performance.png)
+
+![CPU vs MPS vs GPU](plots/slim_pajama/cpu_mps_gpu.png)
+
+
 
 
 
