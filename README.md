@@ -8,7 +8,7 @@ I learned many practical lessons related to training LLMs at scale on a fixed bu
 
 I use a standard decoder-only transformer with de-embedding weights tied to the embedding weights in order to reduce the total parameter count.
 
-**Model architecture**: [model.py](src/model.py)
+**Model architecture**: [`model.py`](src/model.py)
 
 ## Hardware accelerators
 
@@ -33,7 +33,7 @@ I use several tricks to improve performance when training on a GPU:
 
 I save model checkpoints throughout training and implement the ability to restart training from a checkpoint.
 
-**Model training**: [train.py](src/train.py)
+**Model training**: [`train.py`](src/train.py)
 
 ## Datasets
 
@@ -98,7 +98,8 @@ Since the full dataset contains more than 2M tokens, we never repeat training da
 
 For my main experiments I train models at various levels of scale on the Slim Pajama dataset.
 
-**Training script**: [`scripts/train_slim_pajama.py`](scripts/train_slim_pajama.py)  
+**Training script**: [`scripts/train_slim_pajama.py`](scripts/train_slim_pajama.py)
+**Training runs**: [`config.yaml`](config.yaml)  
 **Results**: [`results/slim_pajama`](results/slim_pajama/)  
 **Analysis**: [`analysis.ipynb`](analysis.ipynb)
 
@@ -286,20 +287,20 @@ Meanwhile the T4 is consistently about 7 times faster than MPS.
 
 There are several things I'd like to improve in the future:
 
-1. **Use gradient checkpointing**---This saves memory by recomputing activations during the backward pass.
+1. **Use gradient checkpointing**&mdash;This saves memory by recomputing activations during the backward pass.
 Naively it would require more compute, but if the extra available memory allowed for an increase of batch size then ultimately it might reduce compute.
 
-2. **Use maximal update parameterization (MPS)**---MPS ensures optimal hyperparameters of small models remain optimal for large models, and so it greatly fascilitates compute optimal training. 
+2. **Use maximal update parameterization (MPS)**&mdash;MPS ensures optimal hyperparameters of small models remain optimal for large models, and so it greatly fascilitates compute optimal training. 
 As discussed above my inability to reproduce the Chinchilla results is likely due to me using standard parameter initialization rather than MPS.
 
-3. **Train larger models**---My estimates show that it would've been feasible to optimally train up to a model size of ~500M parameters given my T4 compute budget.
+3. **Train larger models**&mdash;My estimates show that it would've been feasible to optimally train up to a model size of ~500M parameters given my T4 compute budget.
 But a lot of my budget was used in prototyping, so my largest model was only 70M parameters.
 I'd like to improve upon this.
 
-4. **Train more optimally**---My benchmarking results show that even my biggest model is far from using the T4 GPU at it's maximum (mixed precision) flop rate.
+4. **Train more optimally**&mdash;My benchmarking results show that even my biggest model is far from using the T4 GPU at it's maximum (mixed precision) flop rate.
 I expect it's difficult / impossible to achieve the max rate in practice, but there is surely room for improvement.
 
-5. **Scaling/emergence of downstream capabilities**---Scaling laws usually focus on the trend of training loss versus flops / parameters / tokens because this trend is very clean (almost linear on a log-log plot).
+5. **Scaling/emergence of downstream capabilities**&mdash;Scaling laws usually focus on the trend of training loss versus flops / parameters / tokens because this trend is very clean (almost linear on a log-log plot).
 But training loss is often a poor proxy for performance on specific downstream tasks.
 In fact performance on specific tasks often doesn't follow a clean scaling law, but instead it's often the case that capabilities suddenly emerge at a particular (a priori unknown) scale.
 In the future I'd like to investigate this for capabilities that are known to emerge at the 100M-1B parameter model scales.
