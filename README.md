@@ -246,7 +246,7 @@ This is counter to common sense: training optimally with a large number of token
 Something is therefore clearly wrong with my methodology. 
 In hindsight, my guess is that the issue is with my model parameter initializations. 
 I used a standard initialization approach in which weight matrices of shape $n_\text{in}$ by $n_\text{out}$ neurons are initialized to be of a scale $1 / \sqrt{n_\text{in}}$.
-However carefully looking at the Chinchilla paper indicates that they use different parameter initialization approach called "Maximal Update Parameterization" (MUP). 
+However carefully looking at the Chinchilla paper indicates that they use different parameter initialization approach called ["Maximal Update Parameterization" (MUP)](https://blog.eleuther.ai/mutransfer/#footnotes). 
 
 MUP is very useful because it allows one to optimize hyperparameters for a small model and directly transfer them to a larger model while remaining confidant that they will remain optimal at the larger scale.
 The key however is that in order for the hyperparameters to remain optimal at the larger scale, regular trainable parameters must be initialized in a non-trivial way that depends on the ratio of the large scale to the small scale.
